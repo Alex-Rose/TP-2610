@@ -1,0 +1,22 @@
+Sources du laboratoire INF2610
+
+== Dépendances ==
+
+* Ubuntu
+
+  apt-get install build-essential pkg-config 
+
+* Fedora
+
+  yum gcc gcc-c++ automake glibc-devel
+
+== Notes de compilation ==
+
+Par défaut, l'optimisation -O2 est utilisé, nécessaire pour obtenir les
+résultats de performance. Si gdb est utilisé pour de débogage, alors le code
+source ne correspondra pas aux instructions.
+
+Pour compiler avec les options de débogage:
+
+ CXXFLAGS="-Wall -g -O0" ./configure
+
