@@ -51,9 +51,11 @@ int main(int argc, char** argv) {
 			continue;
 		char r[33];
 		char w[33];
+		char p[10];
 		sprintf(r, "%d", (fd[i][R]));
 		sprintf(w, "%d", (fd[i][W]));
-		execl("/home/alexrose/Documents/TP-2610/TP1/inf2610-tp1-hiv2013-1.0.0/src/coprocesseur", r, w);
+		sprintf(p, "%d", i);
+		execl("/home/alexrose/Documents/TP-2610/TP1/inf2610-tp1-hiv2013-1.0.0/src/coprocesseur", r, w, p);
 	}
 	
 	
@@ -98,10 +100,9 @@ int main(int argc, char** argv) {
 		while(s[++len] != '\0' && len < 50);
 		
 		proc = parseLine(s, &len);
-		printf("PROC : %d %s\n", proc, s);
+		//printf("PROC : %d %s\n", proc, s);
 		
-		write(fd[proc][W], s, len);
-		
+		write(fd[proc - 1][W], s, len + 1);
 	}
 	// On demande aux coprocesseurs et au périphérique d'entrée/sortie de se terminer
 
@@ -126,12 +127,13 @@ int parseLine(char* message, int* len)
 		i++;
 	}
 	i++;
-	(*len) -= i;
-	for(int j = 0; i < *len; j++)
+	int j;
+	for(j = 0; i < *len; j++)
 	{
 		message[j] = message[i++];
 	}
-	message[i] = '\0';
+	(*len) -= (i - j);
+	message[j] = '\0';
 	return atoi(c_proc);
 }
 

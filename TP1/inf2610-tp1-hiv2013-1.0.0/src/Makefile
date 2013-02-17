@@ -147,7 +147,7 @@ CPPFLAGS =
 CXX = g++
 CXXCPP = 
 CXXDEPMODE = depmode=none
-CXXFLAGS = 
+CXXFLAGS = -Wall -g -O0
 CYGPATH_W = echo
 DEFS = -DHAVE_CONFIG_H
 DEPDIR = .deps
