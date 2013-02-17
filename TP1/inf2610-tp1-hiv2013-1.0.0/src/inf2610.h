@@ -20,6 +20,8 @@
 #define R 0
 #define W 1
 
+#define PROC_COPROC "proc_co"
+
 // Le nombre minimum de secondes entre deux interruptions
 #define MIN_INT_USEC	200
 // Le nombre maximum de secondes entre deux interruptions

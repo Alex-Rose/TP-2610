@@ -20,9 +20,18 @@
 using namespace std;
 void parseMessage(char* message, int len, std::queue<Instruction*> *queue, int p); 
 bool executeOperation(Instruction*);
+void alarm();
+void signalHandler(int signum);
 
 int main(int argc, char** argv) {
-
+//sleep(10);
+	signal(SIGALRM, &signalHandler);
+	int alarm_pid;
+	if((alarm_pid = fork()) == 0)
+	{
+		alarm();
+	}
+	
 	// Ouverture du/des FIFOs utiles
 	queue<Instruction*> *operations = new queue<Instruction*>();
 		
@@ -49,11 +58,12 @@ int main(int argc, char** argv) {
 	printf("poop\n");
 	
 	Instruction *it;
-	while((it = operations->front()) != NULL)
-	{
-		printf("Oper: %d %c %d %d \t\t = %d\n",proc_nb,  it->operation, it->valeur1, it->valeur2, (int)it->resultat);
-		operations->pop();
-	}
+	
+	//while((it = operations->front()) != NULL)
+	//{
+	//	printf("Oper: %d %c %d %d \t\t = %d\n",proc_nb,  it->operation, it->valeur1, it->valeur2, (int)it->resultat);
+	//	operations->pop();
+	//}
 	// Réception des instructions
 	//	On traite l'opération (ou on sort de la boucle)
 	//	Si c'était bien une opération, on met à jour l'instruction
@@ -133,4 +143,27 @@ bool executeOperation(Instruction* i)
 			return false;
 	}
 	return true;
+}
+
+void alarm()
+{
+	while(true)
+	{
+		//int sec = rand() % (MAX_INT_USEC - MIN_INT_USEC) + MIN_INT_USEC;
+		sleep(10);
+		kill(getppid(), SIGALRM);
+	}
+}
+
+void signalHandler(int signum)
+{
+	int fd = open(PROC_COPROC, O_WRONLY | O_APPEND);
+	if ( fd != -1 ) 
+	{
+		write( fd , "message\n" , 8);
+	}
+	else
+		printf("Ne peut pas ecrire sur le fifo");
+	close(fd);
+	
 }
