@@ -45,7 +45,12 @@ int main(int argc, char** argv) {
 	close(fd[R]);
 	printf("poop\n");
 	
-	
+	Instruction *it;
+	while((it = operations->front()) != NULL)
+	{
+		printf("Oper: %c %d %d\n", it->operation, it->valeur1, it->valeur2);
+		operations->pop();
+	}
 	// Réception des instructions
 	//	On traite l'opération (ou on sort de la boucle)
 	//	Si c'était bien une opération, on met à jour l'instruction
@@ -58,7 +63,7 @@ int main(int argc, char** argv) {
 
 void parseMessage(char* message, int len, queue<Instruction*> *queue)
 {
-	printf(message);
+	
 	int i = 0;
 	while(i < len && message[i] != '\0')
 	{

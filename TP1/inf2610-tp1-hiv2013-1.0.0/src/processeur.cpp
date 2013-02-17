@@ -24,6 +24,7 @@
 
 using namespace std;
 
+int parseLine(char* message, int* len);
 
 // Exécution du processeur
 int main(int argc, char** argv) {
@@ -88,12 +89,16 @@ int main(int argc, char** argv) {
 	
 	while(!file.eof())
 	{
-		file>>proc>>op>>a>>b;
-		file.seekg(1, ios::cur);
+		//file>>proc>>op>>a>>b;
+		//file.seekg(1, ios::cur);
 		char s[50];
-		sprintf(s, "%c %d %d\n", op, a, b);
+		file.getline(s, 50);
+		
 		int len = -1;
-		while(s[++len] != '0' && len < 50);
+		while(s[++len] != '\0' && len < 50);
+		
+		proc = parseLine(s, &len);
+		printf("PROC : %d %s\n", proc, s);
 		
 		write(fd[proc][W], s, len);
 		
@@ -111,4 +116,22 @@ int main(int argc, char** argv) {
 }
 
 
+int parseLine(char* message, int* len)
+{
+	int proc, i = 0;
+	char c_proc[10];
+	while(message[i] != ' ')
+	{
+		c_proc[i] = message[i];
+		i++;
+	}
+	i++;
+	(*len) -= i;
+	for(int j = 0; i < *len; j++)
+	{
+		message[j] = message[i++];
+	}
+	message[i] = '\0';
+	return atoi(c_proc);
+}
 
