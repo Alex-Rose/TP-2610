@@ -64,7 +64,7 @@ int main(int argc, char** argv) {
 	
 	// Ouverture du fichier journal
 	FILE *log = fopen("./journaldemontreal", "w");
-	
+	//printf("sent log %d path %s\n", argc, argv[2]);
 	// On lit les instructions tant qu'on en reçoit
 	//	Si c'est bien une instruction/opération/statistique, on passe par la fonction
 	//	journal pour retourner le texte à écrire dans le journal
@@ -87,28 +87,4 @@ int main(int argc, char** argv) {
 	return 0;
 }
 
-bool executeOperation(Instruction* i)
-{
-	switch(i->operation)
-	{
-		case 'A':
-			i->resultat = (double)(i->valeur1 + i->valeur2);
-			break;
-		case 'S':
-			i->resultat = (double)(i->valeur1 - i->valeur2);
-			break;
-		case 'M':
-			i->resultat = (double)(i->valeur1) * (double)(i->valeur2);
-			break;
-		case 'D':
-			i->resultat = (double)(i->valeur1) / (double)(i->valeur2);
-			break;
-		case 'O':
-			i->resultat = (double)(i->valeur1 % i->valeur2);
-			break;
-		default:
-			return false;
-	}
-	return true;
-}
 

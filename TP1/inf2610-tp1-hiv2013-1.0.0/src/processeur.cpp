@@ -121,26 +121,33 @@ int main(int argc, char** argv) {
 		char c;
 		int n;
 		int k = 0;
-		printf("\n");
-		while ((n = read(fd_co, &c, 1)) > 0)
+		//printf("\n");
+		pair<int, int> pa;
+		while ((n = read(fd_co, &pa, sizeof(pair<int, int>))) > 0)
+		//while ((n = read(fd_co, &c, 1)) > 0)
 		{
-			if(c == '\0')
-			{
-				temp[k] = c;
-				Instruction* stat = countStats(temp, co_nb_oper, co_nb_interrupt);
-				if (stat != NULL)
-				{
-					write(fd[stat->coprocesseur - 1][W], stat, sizeof(Instruction));
-					delete stat;
-				}
-				temp[0] = '\0';
-				k = 0;
-			}
-			else
-			{
-				temp[k] = c;
-				k++;
-			}
+			//if(c == '\0')
+			//{
+			//	temp[k] = c;
+			//	Instruction* stat = countStats(temp, co_nb_oper, co_nb_interrupt);
+			//	if (stat != NULL)
+			//	{
+			//		write(fd[stat->coprocesseur - 1][W], stat, sizeof(Instruction));
+			//		delete stat;
+			//	}
+			//	temp[0] = '\0';
+			//	k = 0;
+			//}
+			//else
+			//{
+			//	temp[k] = c;
+			//	k++;
+			//}
+			Instruction stat;
+			stat.coprocesseur = pa.first;
+			stat.resultat = pa.second;
+			stat.operation = 'Z';
+			write(fd[stat.coprocesseur - 1][W], &stat, sizeof(Instruction));
 		}
 		sleep(1);
 	}

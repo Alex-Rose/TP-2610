@@ -17,6 +17,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <cstring>
+#include <utility>
 
 using namespace std;
 bool executeOperation(Instruction*);
@@ -115,7 +116,11 @@ void signalHandler(int signum)
 		sprintf(mes, "%d %d", proc_nb, counter);
 		//int len = -1;
 		//while(len < 30 && mes[++len] != '\0');
-		write( fd_co_proc , mes , strlen(mes) + 1);
+		//write( fd_co_proc , mes , strlen(mes) + 1);
+		pair<int, int> p;
+		p.first = proc_nb;
+		p.second = counter;
+		write( fd_co_proc , &p ,sizeof(pair<int, int>));
 		counter = 0;
 		sendISignal();
 	}
