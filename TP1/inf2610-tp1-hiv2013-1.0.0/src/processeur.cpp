@@ -26,8 +26,16 @@ using namespace std;
 
 int parseLine(char* message, int* len);
 void parseInstruction(char* message, int len, Instruction *ins);
+Instruction* countStats(char* s, int* op, int* in);
+
+
 // Exécution du processeur
 int main(int argc, char** argv) {
+	
+	int nbCo = 3;
+	int co_nb_oper[nbCo];
+	int co_nb_interrupt[nbCo];
+	
 	// On vérifie les arguments
 
 	// On créé la fifo avec laquelle les autres processus pourront communiquer avec le processeur	
@@ -35,7 +43,8 @@ int main(int argc, char** argv) {
 	{
 		printf("Impossible de créer le tube");
 		unlink(PROC_COPROC);
-		exit (1);
+		//if(mkfifo(PROC_COPROC, 0666) != 0)
+			exit (1);
 	}
 	
 	int fd_co = open(PROC_COPROC, O_RDONLY | O_NDELAY);
@@ -45,10 +54,9 @@ int main(int argc, char** argv) {
 	{
 		printf("Impossible de créer le tube");
 		unlink(CO_LOG);
-		exit (1);
+		//if(mkfifo(CO_LOG, 0666) != 0)
+			exit (1);
 	}
-	
-	int nbCo = 3;
 	
 	// Création des coprocesseurs
 	int p_pid = getpid();
@@ -95,6 +103,7 @@ int main(int argc, char** argv) {
 	for(int i = 0; i < nbCo; i++)
 		close(fd[i][R]);
 		
+	char temp[64];
 	while(!file.eof())
 	{
 		char s[50];
@@ -111,9 +120,27 @@ int main(int argc, char** argv) {
 		
 		char c;
 		int n;
+		int k = 0;
+		printf("\n");
 		while ((n = read(fd_co, &c, 1)) > 0)
 		{
-			printf("%c", c);
+			if(c == '\0')
+			{
+				temp[k] = c;
+				Instruction* stat = countStats(temp, co_nb_oper, co_nb_interrupt);
+				if (stat != NULL)
+				{
+					write(fd[stat->coprocesseur - 1][W], stat, sizeof(Instruction));
+					delete stat;
+				}
+				temp[0] = '\0';
+				k = 0;
+			}
+			else
+			{
+				temp[k] = c;
+				k++;
+			}
 		}
 		sleep(1);
 	}
@@ -200,3 +227,47 @@ int parseLine(char* message, int* len)
 	return atoi(c_proc);
 }
 
+Instruction* countStats(char* s, int* nb_op, int* nb_interupt)
+{
+	int a, b, i = 0;
+	char c_a[8], c_b[8];
+	while(s[i] != ' ' && i < 4)
+	{
+		if (s[i] == '\0')
+			return NULL;
+			
+		c_a[i] = s[i];
+		i++;
+	}
+	if (i == 4)
+		return NULL;
+		
+	c_a[++i] = '\0';
+	int max = 4;
+	while(s[i] != '\0' && max > 0)
+	{
+		c_b[i] = s[i];
+		i++;
+		max--;
+	}
+	if (max == 0)
+		return NULL;
+		
+	c_b[++i] = '\0';
+	
+	a = atoi(c_a);
+	b = atoi(c_b);
+	
+	if(a == 0)
+		return NULL;
+	
+	nb_op[a] += b;
+	nb_interupt[a]++;
+	
+	Instruction* ins = new Instruction();
+	ins->coprocesseur = a;
+	ins->operation = 'Z';
+	ins->resultat = (double)nb_op[a] / (double)nb_interupt[a];
+	
+	return ins;
+}

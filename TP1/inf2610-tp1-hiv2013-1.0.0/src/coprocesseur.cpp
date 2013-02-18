@@ -15,6 +15,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
+#include <errno.h>
+#include <cstring>
 
 using namespace std;
 bool executeOperation(Instruction*);
@@ -110,15 +112,15 @@ void signalHandler(int signum)
 	if ( fd_co_proc != -1 ) 
 	{
 		char mes[30];
-		sprintf(mes, "%d %d\n", proc_nb, counter);//\n pour le besoin de la cause
-		int len = -1;
-		while(len < 30 && mes[++len] != '\0');
-		write( fd_co_proc , mes , len + 1);
+		sprintf(mes, "%d %d", proc_nb, counter);
+		//int len = -1;
+		//while(len < 30 && mes[++len] != '\0');
+		write( fd_co_proc , mes , strlen(mes) + 1);
 		counter = 0;
 		sendISignal();
 	}
 	else
-		printf("Ne peut pas ecrire sur le fifo\n");
+		printf("Ne peut pas ecrire sur le fifo co-proc %d\n", errno);
 
 	
 	int sec = rand() % (MAX_INT_USEC - MIN_INT_USEC) + MIN_INT_USEC;
@@ -137,7 +139,7 @@ void sendISignal()
 		write( fd_co_log , &ins , sizeof(ins));
 	}
 	else
-		printf("Ne peut pas ecrire sur le fifo\n");
+		printf("Ne peut pas ecrire sur le fifo co-log %d\n", errno);
 }
 
 void informLog(Instruction ins)
@@ -148,5 +150,5 @@ void informLog(Instruction ins)
 		counter = 0;
 	}
 	else
-		printf("Ne peut pas ecrire sur le fifo\n");
+		printf("Ne peut pas ecrire sur le fifo co-log %d\n", errno);
 }

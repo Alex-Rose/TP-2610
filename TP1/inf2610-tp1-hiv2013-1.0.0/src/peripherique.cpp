@@ -30,11 +30,11 @@ const char * journal(Instruction instruction) {
 	switch(instruction.operation)
 	{
 		case 'Z':
-			sprintf(message, "Le processeur %d a traite une moyenne %f d'operations par cycle.\n"
+			sprintf(message, "[stat]Le processeur %d a traite une moyenne %f d'operations par cycle.\n"
 			, instruction.coprocesseur, instruction.resultat);
 			break;
 		case 'I':
-			sprintf(message, "Le processeur %d a recu une interruption.\n", instruction.coprocesseur);
+			sprintf(message, "Le coprocesseur %d a recu une interruption.\n", instruction.coprocesseur);
 			break;
 		case 'A':
 		case 'S':
@@ -70,7 +70,7 @@ int main(int argc, char** argv) {
 	//	journal pour retourner le texte à écrire dans le journal
 	//	Sinon, on quitte
 
-	Instruction ins;// = new Instruction();
+	Instruction ins;
 
 	int n;
 	while ((n = read(fd, &ins, sizeof(Instruction))) > 0)
