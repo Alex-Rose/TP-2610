@@ -15,26 +15,24 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
-#include <queue>
 
 using namespace std;
-void parseMessage(char* message, int len, std::queue<Instruction*> *queue, int p); 
 bool executeOperation(Instruction*);
-void alarm(int pid);
 void signalHandler(int signum);
+void sendISignal();
+void informLog(Instruction);
 
+int counter = 0;
+int proc_nb = 0; 
+int fd_co_per = 0;
 int main(int argc, char** argv) {
-//sleep(10);
+
 	signal(SIGALRM, &signalHandler);
-	int alarm_pid;
-	int co_proc_pid = getpid();
-	if((alarm_pid = fork()) == 0)
-	{
-		alarm(co_proc_pid);
-	}
+	int sec = rand() % (MAX_INT_USEC - MIN_INT_USEC) + MIN_INT_USEC;
+	ualarm(sec * 1000, 0);
 	
 	// Ouverture du/des FIFOs utiles
-	queue<Instruction*> *operations = new queue<Instruction*>();
+	fd_co_per = open(CO_LOG, O_WRONLY | O_APPEND);
 		
 	printf("coprocessur %d\n", getpid());
 	
@@ -42,82 +40,39 @@ int main(int argc, char** argv) {
 	int fd[2];
 	fd[R] = atoi(argv[0]);
 	fd[W] = atoi(argv[1]);
-	int proc_nb = atoi(argv[2]);
+	proc_nb = atoi(argv[2]) + 1;
 	int nb;
 	
 	close(fd[W]);
-	//sleep(10);
 
-
-	while((nb = read(fd[R], message, 1000)) > 0)
-	{
-		parseMessage(message, nb, operations, proc_nb);	
-		message[0] = '\0';
-		nb = 0;
-	}
-	close(fd[R]);
-	printf("poop\n");
-	
-	Instruction *it;
-	
-	//while((it = operations->front()) != NULL)
-	//{
-	//	printf("Oper: %d %c %d %d \t\t = %d\n",proc_nb,  it->operation, it->valeur1, it->valeur2, (int)it->resultat);
-	//	operations->pop();
-	//}
 	// Réception des instructions
 	//	On traite l'opération (ou on sort de la boucle)
 	//	Si c'était bien une opération, on met à jour l'instruction
 	//	Si c'était bien une opération, on envoie l'instruction mise à jour au périphérique
 
-	// On libère les ressources allouées
-	while((it = operations->front()) != NULL)
+	Instruction *ins = new Instruction();
+	while((nb = read(fd[R], ins, sizeof(Instruction))) > 0)
 	{
-		delete it;
-		operations->pop();
+		if(ins->operation == '0')
+		{
+			delete ins;
+			ins = 0;
+			break;
+		}
+		executeOperation(ins);
+		informLog(*ins);
+		//printf("Instruction %d %c %d\n", ins->valeur1, ins->operation, ins->valeur2); 
+		//delete ins;
+		counter++;
 	}
+	close(fd[R]);
+	printf("poop\n");
 	
+
+	// On libère les ressources allouées
+	close(fd_co_per);
 	
 	return 0;
-}
-
-void parseMessage(char* message, int len, queue<Instruction*> *queue, int proc_nb)
-{
-	int i = 0;
-	while(i < len && message[i] != '\0')
-	{
-		char op = message[i];
-		i += 2;
-		char c_a[10], c_b[10];
-		int j = 0;
-		while(message[i] != ' ')
-		{
-			c_a[j] = message[i];
-			j++;
-			i++;
-		}
-		j = 0;
-		while(message[i] != '\0')
-		{
-			c_b[j] = message[i];
-			j++;
-			i++;
-		}
-		int a = atoi(c_a);
-		int b = atoi(c_b);
-		
-		Instruction* ins = new Instruction();
-		ins->coprocesseur = proc_nb;
-		ins->operation = op;
-		ins->valeur1 = a;
-		ins->valeur2 = b;
-		if(executeOperation(ins))
-			queue->push(ins);
-		else
-			delete ins;
-			
-		i++;
-	}
 }
 
 
@@ -146,25 +101,51 @@ bool executeOperation(Instruction* i)
 	return true;
 }
 
-void alarm(int pid)
-{
-	while(true)
-	{
-		//int sec = rand() % (MAX_INT_USEC - MIN_INT_USEC) + MIN_INT_USEC;
-		sleep(10);
-		kill(pid, SIGALRM);
-	}
-}
 
 void signalHandler(int signum)
 {
 	int fd = open(PROC_COPROC, O_WRONLY | O_APPEND);
 	if ( fd != -1 ) 
 	{
-		write( fd , "message\n" , 8);
+		char mes[30];
+		sprintf(mes, "%d %d\n", proc_nb, counter);//\n pour le besoin de la cause
+		int len = -1;
+		while(len < 30 && mes[++len] != '\0');
+		write( fd , mes , len + 1);
+		counter = 0;
+		sendISignal();
 	}
 	else
 		printf("Ne peut pas ecrire sur le fifo\n");
 	close(fd);
 	
+	int sec = rand() % (MAX_INT_USEC - MIN_INT_USEC) + MIN_INT_USEC;
+	ualarm(sec * 1000, 0);
+}
+
+void sendISignal()
+{
+	int fd_co_per = open(CO_LOG, O_WRONLY | O_APPEND);
+	if ( fd_co_per != -1 ) 
+	{
+		Instruction ins;
+		ins.coprocesseur = proc_nb;
+		ins.operation = 'I';
+		ins.valeur1 = 0;
+		ins.valeur2 = 0;
+		write( fd_co_per , &ins , sizeof(ins));
+	}
+	else
+		printf("Ne peut pas ecrire sur le fifo\n");
+}
+
+void informLog(Instruction ins)
+{
+	if ( fd_co_per != -1 ) 
+	{	
+		write( fd_co_per , &ins , sizeof(Instruction));
+		counter = 0;
+	}
+	else
+		printf("Ne peut pas ecrire sur le fifo\n");
 }

@@ -25,7 +25,7 @@
 using namespace std;
 
 int parseLine(char* message, int* len);
-
+void parseInstruction(char* message, int len, Instruction *ins);
 // Exécution du processeur
 int main(int argc, char** argv) {
 	// On vérifie les arguments
@@ -39,10 +39,15 @@ int main(int argc, char** argv) {
 	}
 	
 	int fd_co = open(PROC_COPROC, O_RDONLY | O_NDELAY);
-	open(PROC_COPROC, O_RDONLY | O_NDELAY);
 	
 	// On créé la fifo avec laquelle les coprocesseurs pourront communiquer avec le périphérique
-
+	if(mkfifo(CO_LOG, 0666) != 0)
+	{
+		printf("Impossible de créer le tube");
+		unlink(CO_LOG);
+		exit (1);
+	}
+	
 	int nbCo = 3;
 	
 	// Création des coprocesseurs
@@ -73,7 +78,12 @@ int main(int argc, char** argv) {
 		
 	
 	// Création du périphérique
-
+	int per_pid = fork();
+	if (per_pid == 0)
+	{
+		execl("src/peripherique", NULL);
+	}
+	
 	// On entre dans le cycle
 	//	Lecture et traitement d'une ligne en mémoire
 	//	On lit le fifo s'il y a un message
@@ -81,7 +91,10 @@ int main(int argc, char** argv) {
 	
 	int proc;
 	
-	
+//	sleep(10);
+	for(int i = 0; i < nbCo; i++)
+		close(fd[i][R]);
+		
 	while(!file.eof())
 	{
 		char s[50];
@@ -90,9 +103,17 @@ int main(int argc, char** argv) {
 		int len = -1;
 		while(s[++len] != '\0' && len < 50);
 		
-		proc = parseLine(s, &len);
+		Instruction ins;
+		
+		parseInstruction(s, len, &ins);
+		
+//		proc = parseLine(s, &len);
+		
+//			printf("Instruction %d %c %d %d\n",ins.coprocesseur, ins.operation , ins.valeur1, ins.valeur2); 
 		 
-		write(fd[proc - 1][W], s, len + 1);
+//		write(fd[proc - 1][W], s, len + 1);
+		//close(fd[ins.coprocesseur - 1][R]);
+		write(fd[ins.coprocesseur - 1][W], &ins, sizeof(Instruction));
 		
 		char c;
 		int n;
@@ -102,10 +123,18 @@ int main(int argc, char** argv) {
 		}
 		sleep(1);
 	}
-	
+		
 	
 	// On demande aux coprocesseurs et au périphérique d'entrée/sortie de se terminer
-
+	for(int i = 0; i < nbCo; i++)
+	{
+		Instruction ins;
+		ins.coprocesseur = 0;
+		ins.operation = '0';
+		ins.valeur1 = 0;
+		ins.valeur2 = 0;
+		write(fd[i][W], &ins, sizeof(Instruction));
+	}
 	// On attend qu'ils se terminent
 
 	// On libère les ressources allouées
@@ -116,10 +145,46 @@ int main(int argc, char** argv) {
 	for(int i = 0; i < nbCo; i++)
 		close(fd[i][W]);
 	unlink(PROC_COPROC);
+	unlink(CO_LOG);
 	printf("GAME OVER!\n");
 	return 0;
 }
 
+void parseInstruction(char* message, int len, Instruction *ins)
+{
+	int i = 0;
+	char c_proc[10];
+	while(message[i] != ' ')
+	{
+		c_proc[i] = message[i];
+		i++;
+	}
+	i++;
+	char op = message[i];
+	i += 2;
+	char c_a[10], c_b[10];
+	int j = 0;
+	while(message[i] != ' ')
+	{
+		c_a[j] = message[i];
+		j++;
+		i++;
+	}
+	j = 0;
+	while(message[i] != '\0')
+	{
+		c_b[j] = message[i];
+		j++;
+		i++;
+	}
+	int a = atoi(c_a);
+	int b = atoi(c_b);
+	
+	ins->coprocesseur = atoi(c_proc);
+	ins->operation = op;
+	ins->valeur1 = a;
+	ins->valeur2 = b;		
+}
 
 int parseLine(char* message, int* len)
 {

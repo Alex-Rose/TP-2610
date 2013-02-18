@@ -16,6 +16,7 @@
 #include <string.h>
 #include <fstream>
 #include <sstream>
+#include <cstdio>
 
 using namespace std;
 
@@ -24,24 +25,90 @@ using namespace std;
  * donnée, le message de journalisation correspondant.
  */
 const char * journal(Instruction instruction) {
-	return "Eh, I have something to write here but.. Eh !";
+	
+	char *message = new char[512];
+	switch(instruction.operation)
+	{
+		case 'Z':
+			sprintf(message, "Le processeur %d a traite une moyenne %f d'operations par cycle.\n"
+			, instruction.coprocesseur, instruction.resultat);
+			break;
+		case 'I':
+			sprintf(message, "Le processeur %d a recu une interruption.\n", instruction.coprocesseur);
+			break;
+		case 'A':
+		case 'S':
+		case 'M':
+		case 'D':
+		case 'O':
+		default:
+			sprintf(message, "Le coprocesseur %d a traite l'operation %c de %d de %d et a obtenu %f comme resultat\n", 
+			instruction.coprocesseur, instruction.operation, instruction.valeur1, instruction.valeur2,
+			instruction.resultat);
+			break;
+	}
+	const char *msg = message;
+	delete message;
+	return msg;
+	
+	
 }
+
+bool executeOperation(Instruction* i);
 
 // Méthode principale du périphérique
 int main(int argc, char** argv) {
-
+	printf("Peripherique ouvert : %d\n", getpid());
 	// Ouverture du/des FIFO
-
+	int fd = open(CO_LOG, O_RDONLY);
+	
 	// Ouverture du fichier journal
-
+	FILE *log = fopen("./journaldemontreal", "w");
+	
 	// On lit les instructions tant qu'on en reçoit
 	//	Si c'est bien une instruction/opération/statistique, on passe par la fonction
 	//	journal pour retourner le texte à écrire dans le journal
 	//	Sinon, on quitte
 
-	// On libère les ressources allouées
+	Instruction ins;// = new Instruction();
 
+	int n;
+	while ((n = read(fd, &ins, sizeof(Instruction))) > 0)
+	{
+		const char *message = journal(ins);
+		fputs(message, log);
+		//delete message;
+	}
+	printf("Peripherique ferme\n");
+
+	// On libère les ressources allouées
+	fclose(log);
+	close(fd);
 	return 0;
 }
 
+bool executeOperation(Instruction* i)
+{
+	switch(i->operation)
+	{
+		case 'A':
+			i->resultat = (double)(i->valeur1 + i->valeur2);
+			break;
+		case 'S':
+			i->resultat = (double)(i->valeur1 - i->valeur2);
+			break;
+		case 'M':
+			i->resultat = (double)(i->valeur1) * (double)(i->valeur2);
+			break;
+		case 'D':
+			i->resultat = (double)(i->valeur1) / (double)(i->valeur2);
+			break;
+		case 'O':
+			i->resultat = (double)(i->valeur1 % i->valeur2);
+			break;
+		default:
+			return false;
+	}
+	return true;
+}
 
