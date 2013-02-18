@@ -20,16 +20,17 @@
 using namespace std;
 void parseMessage(char* message, int len, std::queue<Instruction*> *queue, int p); 
 bool executeOperation(Instruction*);
-void alarm();
+void alarm(int pid);
 void signalHandler(int signum);
 
 int main(int argc, char** argv) {
 //sleep(10);
 	signal(SIGALRM, &signalHandler);
 	int alarm_pid;
+	int co_proc_pid = getpid();
 	if((alarm_pid = fork()) == 0)
 	{
-		alarm();
+		alarm(co_proc_pid);
 	}
 	
 	// Ouverture du/des FIFOs utiles
@@ -145,13 +146,13 @@ bool executeOperation(Instruction* i)
 	return true;
 }
 
-void alarm()
+void alarm(int pid)
 {
 	while(true)
 	{
 		//int sec = rand() % (MAX_INT_USEC - MIN_INT_USEC) + MIN_INT_USEC;
 		sleep(10);
-		kill(getppid(), SIGALRM);
+		kill(pid, SIGALRM);
 	}
 }
 
@@ -163,7 +164,7 @@ void signalHandler(int signum)
 		write( fd , "message\n" , 8);
 	}
 	else
-		printf("Ne peut pas ecrire sur le fifo");
+		printf("Ne peut pas ecrire sur le fifo\n");
 	close(fd);
 	
 }

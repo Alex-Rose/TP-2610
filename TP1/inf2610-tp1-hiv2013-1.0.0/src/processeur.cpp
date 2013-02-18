@@ -30,13 +30,16 @@ int parseLine(char* message, int* len);
 int main(int argc, char** argv) {
 	// On vérifie les arguments
 
-	// On créé la fifo avec laquelle les autres processus pourront communiquer avec le processeur
+	// On créé la fifo avec laquelle les autres processus pourront communiquer avec le processeur	
 	if(mkfifo(PROC_COPROC, 0666) != 0)
 	{
 		printf("Impossible de créer le tube");
 		unlink(PROC_COPROC);
 		exit (1);
 	}
+	
+	int fd_co = open(PROC_COPROC, O_RDONLY | O_NDELAY);
+	open(PROC_COPROC, O_RDONLY | O_NDELAY);
 	
 	// On créé la fifo avec laquelle les coprocesseurs pourront communiquer avec le périphérique
 
@@ -77,6 +80,8 @@ int main(int argc, char** argv) {
 	fstream file("/home/alexrose/Documents/TP-2610/TP1/inf2610-tp1-hiv2013-1.0.0/memoire/memoire.txt", ios::in);
 	
 	int proc;
+	
+	
 	while(!file.eof())
 	{
 		char s[50];
@@ -86,20 +91,15 @@ int main(int argc, char** argv) {
 		while(s[++len] != '\0' && len < 50);
 		
 		proc = parseLine(s, &len);
-		
+		 
 		write(fd[proc - 1][W], s, len + 1);
 		
-		int fd_co = open(PROC_COPROC, O_RDONLY | O_NDELAY);
 		char c;
 		int n;
-		fcntl(fd_co,F_SETFL,0);
 		while ((n = read(fd_co, &c, 1)) > 0)
 		{
 			printf("%c", c);
 		}
-
-		close(fd_co);
-		
 		sleep(1);
 	}
 	
@@ -109,6 +109,9 @@ int main(int argc, char** argv) {
 	// On attend qu'ils se terminent
 
 	// On libère les ressources allouées
+	
+	close(fd_co);
+	
 	file.close();
 	for(int i = 0; i < nbCo; i++)
 		close(fd[i][W]);
