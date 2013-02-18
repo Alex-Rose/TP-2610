@@ -107,12 +107,6 @@ int main(int argc, char** argv) {
 		
 		parseInstruction(s, len, &ins);
 		
-//		proc = parseLine(s, &len);
-		
-//			printf("Instruction %d %c %d %d\n",ins.coprocesseur, ins.operation , ins.valeur1, ins.valeur2); 
-		 
-//		write(fd[proc - 1][W], s, len + 1);
-		//close(fd[ins.coprocesseur - 1][R]);
 		write(fd[ins.coprocesseur - 1][W], &ins, sizeof(Instruction));
 		
 		char c;

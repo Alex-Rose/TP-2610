@@ -24,7 +24,8 @@ void informLog(Instruction);
 
 int counter = 0;
 int proc_nb = 0; 
-int fd_co_per = 0;
+int fd_co_proc = 0;
+int fd_co_log = 0;
 int main(int argc, char** argv) {
 
 	signal(SIGALRM, &signalHandler);
@@ -32,7 +33,8 @@ int main(int argc, char** argv) {
 	ualarm(sec * 1000, 0);
 	
 	// Ouverture du/des FIFOs utiles
-	fd_co_per = open(CO_LOG, O_WRONLY | O_APPEND);
+	fd_co_proc = open(PROC_COPROC, O_WRONLY | O_APPEND);
+	fd_co_log = open(CO_LOG, O_WRONLY | O_APPEND);
 		
 	printf("coprocessur %d\n", getpid());
 	
@@ -70,7 +72,8 @@ int main(int argc, char** argv) {
 	
 
 	// On libère les ressources allouées
-	close(fd_co_per);
+	close(fd_co_proc);
+	close(fd_co_log);
 	
 	return 0;
 }
@@ -104,20 +107,19 @@ bool executeOperation(Instruction* i)
 
 void signalHandler(int signum)
 {
-	int fd = open(PROC_COPROC, O_WRONLY | O_APPEND);
-	if ( fd != -1 ) 
+	if ( fd_co_proc != -1 ) 
 	{
 		char mes[30];
 		sprintf(mes, "%d %d\n", proc_nb, counter);//\n pour le besoin de la cause
 		int len = -1;
 		while(len < 30 && mes[++len] != '\0');
-		write( fd , mes , len + 1);
+		write( fd_co_proc , mes , len + 1);
 		counter = 0;
 		sendISignal();
 	}
 	else
 		printf("Ne peut pas ecrire sur le fifo\n");
-	close(fd);
+
 	
 	int sec = rand() % (MAX_INT_USEC - MIN_INT_USEC) + MIN_INT_USEC;
 	ualarm(sec * 1000, 0);
@@ -125,15 +127,14 @@ void signalHandler(int signum)
 
 void sendISignal()
 {
-	int fd_co_per = open(CO_LOG, O_WRONLY | O_APPEND);
-	if ( fd_co_per != -1 ) 
+	if ( fd_co_log != -1 ) 
 	{
 		Instruction ins;
 		ins.coprocesseur = proc_nb;
 		ins.operation = 'I';
 		ins.valeur1 = 0;
 		ins.valeur2 = 0;
-		write( fd_co_per , &ins , sizeof(ins));
+		write( fd_co_log , &ins , sizeof(ins));
 	}
 	else
 		printf("Ne peut pas ecrire sur le fifo\n");
@@ -141,9 +142,9 @@ void sendISignal()
 
 void informLog(Instruction ins)
 {
-	if ( fd_co_per != -1 ) 
+	if ( fd_co_log != -1 ) 
 	{	
-		write( fd_co_per , &ins , sizeof(Instruction));
+		write( fd_co_log , &ins , sizeof(Instruction));
 		counter = 0;
 	}
 	else
