@@ -35,6 +35,11 @@ void* minuterie (void* arg);
 std::queue<_MessageCJ*> file1;
 pthread_mutex_t file1_lock = PTHREAD_MUTEX_INITIALIZER;
 
+
+//condition pour la lecture
+pthread_cond_t nonEmpty = PTHREAD_COND_INITIALIZER;
+pthread_mutex_t player_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 //Gestionnaire de signal
 void sigHandler(int arg)
 {
@@ -162,7 +167,7 @@ std::list<int> getOptions (int (&grid)[9][9], int x, int y)
     
     return opt;
 }
-//Exécutée par le thread principal (contrôleur)
+//Execute par le thread principal (controleur)
 int main (int argc, char **argv)
 {
     if (argc != 6)
@@ -207,6 +212,7 @@ int main (int argc, char **argv)
         if (empty == 0)
             break;
         
+        pthread_mutex_lock(&file1_lock);
         if (file1.size() < 4)
         {
             _MessageCJ* msg = new _MessageCJ();
@@ -216,7 +222,6 @@ int main (int argc, char **argv)
             bool duplicate = false;
             std::queue<_MessageCJ*> temp;
             
-            pthread_mutex_lock(&file1_lock);
             while(!file1.empty())
             {
                 temp.push(new _MessageCJ((*file1.front())));
@@ -264,21 +269,52 @@ int main (int argc, char **argv)
 ////////////////////////////////////////// THREAD FUNCTIONS //////////////////////////////////////////////////
 
 /**************************************** thread_Alarm*****************************************************/
-//Function exécutée par le thread_Alarm
+//Function execute par le thread_Alarm
 void* minuterie (void* arg){
-//Dormir pendant la durée maximale requise
+//Dormir pendant la durïee maximale requise
 
 //Envoyer un sIGALRM au thread principal
 
 }
 /**************************************** thread_Accueil*****************************************************/
-//Function exécutée par le thread_Accueil
+//Function execute par le thread_Accueil
 void* accueil(void* arg){
 
 
 }
 /**************************************** thread_Joueur*****************************************************/
-//Function exécutée par le thread_Joueur
+//Function execute par le thread_Joueur
 void* jouer(void* arg){
+  
+ std::queue<MessageCJ*> queue_;
+  MessageCJ* currentMessage;
+  
+  
+  while(1){
     
+    pthread_mutex_lock(&player_mutex);
+    
+    while(queue_.size()<=0){
+      pthread_cond_wait(&nonEmpty,&player_mutex);
+    }
+    
+    currentMessage=queue_.front();
+    
+    //travaiol sur le message a faire ici
+    
+    queue_.pop();
+    
+    pthread_mutex_unlock(&player_mutex);
+    
+    
+    
+    
+    
+    
+  }
+  
+  
+
 }
+
+
