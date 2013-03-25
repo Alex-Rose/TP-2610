@@ -33,7 +33,9 @@ void* minuterie (void* arg);
 
 ///////////////////////////////////// GLOBAL VARIABLES //////////////////////////////////////////////
 std::queue<_MessageCJ*> file1;
+std::queue<_MessageJC*> file2;
 pthread_mutex_t file1_lock = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t file2_lock = PTHREAD_MUTEX_INITIALIZER;
 
 
 //condition pour la lecture
@@ -286,7 +288,7 @@ void* accueil(void* arg){
 //Function execute par le thread_Joueur
 void* jouer(void* arg){
   
- std::queue<MessageCJ*> queue_;
+ 
   MessageCJ* currentMessage;
   
   
@@ -294,17 +296,19 @@ void* jouer(void* arg){
     
     pthread_mutex_lock(&player_mutex);
     
-    while(queue_.size()<=0){
-      pthread_cond_wait(&nonEmpty,&player_mutex);
+    while(file1.size()==0){
+      pthread_cond_wait(&nonEmpty,&file1_lock);
     }
     
-    currentMessage=queue_.front();
+    currentMessage=file1.front();
     
     //travaiol sur le message a faire ici
     
-    queue_.pop();
+    file1.pop();
     
-    pthread_mutex_unlock(&player_mutex);
+    pthread_mutex_unlock(&file1_lock);
+    
+    pthread_mutex_lock(&file2_lock);
     
     
     
