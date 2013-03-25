@@ -20,6 +20,9 @@
 #include <errno.h>
 #include <queue>
 #include <list>
+#include <utility>
+#include <map>
+#include <algorithm>
 
 
 
@@ -40,7 +43,8 @@ pthread_mutex_t file2_lock = PTHREAD_MUTEX_INITIALIZER;
 
 //condition pour la lecture
 pthread_cond_t nonEmpty = PTHREAD_COND_INITIALIZER;
-pthread_mutex_t player_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t nonFullFile2 = PTHREAD_COND_INITIALIZER;
+
 
 //Gestionnaire de signal
 void sigHandler(int arg)
@@ -290,25 +294,52 @@ void* jouer(void* arg){
   
  
   MessageCJ* currentMessage;
+  std::map<std::pair<int,int>,std::list<int> > alreadyTry;
+  std::list<int>::iterator findIter;
   
   
   while(1){
     
-    pthread_mutex_lock(&player_mutex);
+    
+    // lecture dans la file 1
+    pthread_mutex_lock(&file1_lock);
     
     while(file1.size()==0){
       pthread_cond_wait(&nonEmpty,&file1_lock);
     }
     
     currentMessage=file1.front();
+    std::pair<int,int> currentPair(currentMessage->ligne,currentMessage->colonne);
     
-    //travaiol sur le message a faire ici
+    std::cout<<"je suis "<< currentPair.first<<" "<<currentPair.second<<std::endl;
+    
+    
+    //for(std::list<int>::const_iterator it = currentMessage->choiceList.begin();
+	//it!=currentMessage->choiceList.end();it++){
+     
+      
+      
+      
+      
+  //  }
+
+     
     
     file1.pop();
     
     pthread_mutex_unlock(&file1_lock);
     
+    
+    
+    
+    //ecriture du resultat sur la file 2
     pthread_mutex_lock(&file2_lock);
+    
+    while(file2.size()>5)
+      pthread_cond_wait(&nonFullFile2, &file2_lock);
+    
+    
+    pthread_mutex_unlock(&file2_lock);
     
     
     
