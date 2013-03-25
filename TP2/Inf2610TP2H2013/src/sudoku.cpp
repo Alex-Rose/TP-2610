@@ -18,6 +18,8 @@
 #include <pthread.h>
 #include <fstream>
 #include <errno.h>
+#include <queue>
+#include <list>
 
 
 
@@ -25,8 +27,12 @@
 #define EXIT_SUCCESS 0
 #define EXIT_FAILIURE 1
 
-///////////////////////////////////// GLOBAL VARIABLES //////////////////////////////////////////////
+void* jouer(void* arg);
+void* accueil(void* arg);
+void* minuterie (void* arg);
 
+///////////////////////////////////// GLOBAL VARIABLES //////////////////////////////////////////////
+std::queue<_MessageCJ*> file1();
 
 //Gestionnaire de signal
 void sigHandler(int arg)
@@ -51,7 +57,6 @@ void loadGrid(std::string path, int (&grid)[9][9])
 
 void printGrid(int (&grid)[9][9])
 {
-    
     for (int i = 0; i < 9; i++)
     {
         for (int j = 0; j < 9; j++)
@@ -82,6 +87,23 @@ int main (int argc, char **argv)
     
     loadGrid(pathGrilleSolution, solution);
 // 	printGrid(solution);
+
+    //creaation des thread joueur par defaut
+    pthread_t joueurs[5];
+    joueurs[0] = pthread_t();
+    joueurs[1] = pthread_t();
+    joueurs[2] = pthread_t();
+    
+    pthread_create(&joueurs[0], NULL, jouer, NULL);
+    pthread_create(&joueurs[1], NULL, jouer, NULL);
+    pthread_create(&joueurs[2], NULL, jouer, NULL);
+    
+    // Creation des deux autres thread
+    pthread_t accueil_t;
+    pthread_t alarm_t;
+    
+    pthread_create(&accueil_t, NULL, accueil, NULL);
+    pthread_create(&alarm_t, NULL, minuterie, NULL);
     
   return EXIT_SUCCESS;
   
@@ -105,5 +127,5 @@ void* accueil(void* arg){
 /**************************************** thread_Joueur*****************************************************/
 //Function exécutée par le thread_Joueur
 void* jouer(void* arg){
-
+    
 }
