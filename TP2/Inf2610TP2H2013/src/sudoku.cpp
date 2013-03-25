@@ -19,6 +19,7 @@
 #include <fstream>
 #include <errno.h>
 #include <queue>
+#include <list>
 
 
 
@@ -26,8 +27,12 @@
 #define EXIT_SUCCESS 0
 #define EXIT_FAILIURE 1
 
-///////////////////////////////////// GLOBAL VARIABLES //////////////////////////////////////////////
+void* jouer(void* arg);
+void* accueil(void* arg);
+void* minuterie (void* arg);
 
+///////////////////////////////////// GLOBAL VARIABLES //////////////////////////////////////////////
+std::queue<_MessageCJ*> file1;
 
 //Gestionnaire de signal
 void sigHandler(int arg)
@@ -48,7 +53,7 @@ void loadGrid(std::string path, int (&grid)[9][9])
     {
         for (int j = 0; j < 9; j++)
         {
-            file >> grid[i][j];
+            file >> grid[j][i];
         }
     }
     file.close();
@@ -56,18 +61,74 @@ void loadGrid(std::string path, int (&grid)[9][9])
 
 void printGrid(int (&grid)[9][9])
 {
-    
     for (int i = 0; i < 9; i++)
     {
         for (int j = 0; j < 9; j++)
         {
-            std::cout << grid[i][j];
+            std::cout << grid[j][i];
         }
         std::cout<<std::endl;
     }
 }
 
-//Exécutée par le thread principal (contrôleur)
+int* findEmpty(int (&grid)[9][9])
+{
+    int* cell = 0;
+    
+    for (int i = 0; i < 9; i++)
+    {
+        for (int j = 0; j < 9; j++)
+        {
+            if (grid[j][i] != 0)
+                continue;
+            cell = new int[2];
+            cell[0] = j;
+            cell[1] = i;
+            return cell;
+        }   
+    }
+    
+    return cell;
+}
+
+int* findEmpty(int (&grid)[9][9], int x, int y)
+{
+    int* cell = 0;
+    
+    for (int i = x; i < 9; i++)
+    {
+        for (int j = y + 1; j < 9; j++)
+        {
+            if (grid[j][i] != 0)
+                continue;
+            cell = new int[2];
+            cell[0] = j;
+            cell[1] = i;
+            return cell;
+        }   
+    }
+    
+    for (int i = 0; i <= x; i++)
+    {
+        for (int j = 0; j < 9; j++)
+        {
+            if (i == x && j == y) //Condifitons initiales => boucle finie
+                return cell;
+            
+            if (grid[j][i] != 0)
+                continue;
+            cell = new int[2];
+            cell[0] = j;
+            cell[1] = i;
+            return cell;
+        }   
+    }
+    
+    return cell;
+}
+
+
+//Exï¿½cutï¿½e par le thread principal (contrï¿½leur)
 int main (int argc, char **argv)
 {
     if (argc != 6)
@@ -87,6 +148,68 @@ int main (int argc, char **argv)
     
     loadGrid(pathGrilleSolution, solution);
 // 	printGrid(solution);
+
+    //creaation des thread joueur par defaut
+    pthread_t joueurs[5];
+    joueurs[0] = pthread_t();
+    joueurs[1] = pthread_t();
+    joueurs[2] = pthread_t();
+    
+    pthread_create(&joueurs[0], NULL, jouer, NULL);
+    pthread_create(&joueurs[1], NULL, jouer, NULL);
+    pthread_create(&joueurs[2], NULL, jouer, NULL);
+    
+    // Creation des deux autres thread
+    pthread_t accueil_t;
+    pthread_t alarm_t;
+    
+    pthread_create(&accueil_t, NULL, accueil, NULL);
+    pthread_create(&alarm_t, NULL, minuterie, NULL);
+    
+    int* empty = findEmpty(grille);
+    do
+    {
+        if (empty == 0)
+            break;
+        
+        if (file1.size() < 4)
+        {
+            _MessageCJ* msg = new _MessageCJ();
+            msg->colonne = empty[0];
+            msg->ligne = empty[1];
+        
+            bool duplicate = false;
+            std::queue<_MessageCJ*> temp;
+            while(!file1.empty())
+            {
+                temp.push(new _MessageCJ((*file1.front())));
+                file1.pop();
+            }
+            
+            while(!temp.empty())
+            {
+                _MessageCJ* tmpMsg = new _MessageCJ((*temp.front()));
+                file1.push(tmpMsg);
+                temp.pop();
+                if (tmpMsg->colonne == msg->colonne && tmpMsg->ligne == msg->ligne)
+                    duplicate = true;
+                
+            }
+            
+            if (!duplicate)
+                file1.push(msg);
+            
+            delete empty;
+            empty = findEmpty(grille, msg->colonne, msg->ligne);
+//             std::cout<<"Finding more empty cells"<<std::endl;
+        }
+        else
+        {
+//             std::cout<<"Queue 1 is full!"<<std::endl;
+        }
+        
+    }while (empty != 0);
+    
     
   return EXIT_SUCCESS;
   
@@ -94,24 +217,24 @@ int main (int argc, char **argv)
 ////////////////////////////////////////// THREAD FUNCTIONS //////////////////////////////////////////////////
 
 /**************************************** thread_Alarm*****************************************************/
-//Function exécutée par le thread_Alarm
+//Function exï¿½cutï¿½e par le thread_Alarm
 void* minuterie (void* arg){
-//Dormir pendant la durée maximale requise
+//Dormir pendant la durï¿½e maximale requise
 
 //Envoyer un sIGALRM au thread principal
 
 }
 /**************************************** thread_Accueil*****************************************************/
-//Function exécutée par le thread_Accueil
+//Function exï¿½cutï¿½e par le thread_Accueil
 void* accueil(void* arg){
 
 
 }
 /**************************************** thread_Joueur*****************************************************/
-//Function exécutée par le thread_Joueur
+//Function exï¿½cutï¿½e par le thread_Joueur
 void* jouer(void* arg){
   
-  std::queue<MessageCJ*> queue_;
+ std::queue<MessageCJ*> queue_;
   MessageCJ* currentMessage;
   
   

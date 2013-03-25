@@ -6,7 +6,7 @@ all: $(NOM_EXEC)
 
 $(NOM_EXEC): sudoku.cpp
 	
-	g++ -o $(NOM_EXEC) sudoku.cpp -lpthread 
+	g++ -g -o $(NOM_EXEC) sudoku.cpp -lpthread 
 
 clean: 
 	
