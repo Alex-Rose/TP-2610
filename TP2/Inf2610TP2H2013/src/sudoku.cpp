@@ -20,6 +20,8 @@
 #include <errno.h>
 #include <queue>
 #include <list>
+#include <utility>
+#include <map>
 
 
 
@@ -41,6 +43,8 @@ pthread_mutex_t file2_lock = PTHREAD_MUTEX_INITIALIZER;
 //condition pour la lecture
 pthread_cond_t nonEmpty = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t player_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+int tidCount = 3;
 
 //Gestionnaire de signal
 void sigHandler(int arg)
@@ -169,6 +173,18 @@ std::list<int> getOptions (int (&grid)[9][9], int x, int y)
     
     return opt;
 }
+
+void eliminateLooser(std::map<int, Joueur*>* listeJoueurs, int tid, Joueur** joueursActifs)
+{
+    pthread_cancel(listeJoueurs->find(tid)->second->thread);
+    
+    for(int i = 0; i < 5; i++)
+    {
+        if (joueursActifs[i] != 0 && joueursActifs[i]->tid == tid)
+            joueursActifs[i] = 0;
+    }
+}
+
 //Execute par le thread principal (controleur)
 int main (int argc, char **argv)
 {
@@ -191,14 +207,30 @@ int main (int argc, char **argv)
 // 	printGrid(solution);
 
     //creaation des thread joueur par defaut
-    pthread_t joueurs[5];
-    joueurs[0] = pthread_t();
-    joueurs[1] = pthread_t();
-    joueurs[2] = pthread_t();
+    Joueur* joueurs[5];
     
-    pthread_create(&joueurs[0], NULL, jouer, NULL);
-    pthread_create(&joueurs[1], NULL, jouer, NULL);
-    pthread_create(&joueurs[2], NULL, jouer, NULL);
+    joueurs[0] = new Joueur();
+    joueurs[1] = new Joueur();
+    joueurs[2] = new Joueur();
+    
+    joueurs[0]->thread = pthread_t();
+    joueurs[1]->thread = pthread_t();
+    joueurs[2]->thread = pthread_t();
+    
+    pthread_create(&joueurs[0]->thread, NULL, jouer, (void*)1);
+    pthread_create(&joueurs[1]->thread, NULL, jouer, (void*)2);
+    pthread_create(&joueurs[2]->thread, NULL, jouer, (void*)3);
+    
+    joueurs[0]->tid = 1;
+    joueurs[1]->tid = 2;
+    joueurs[2]->tid = 3;
+    
+    
+    std::map<int, Joueur*> listeJoueurs;
+    listeJoueurs.insert(std::pair<int, Joueur*>(joueurs[0]->tid, joueurs[0]));
+    listeJoueurs.insert(std::pair<int, Joueur*>(joueurs[1]->tid, joueurs[0]));
+    listeJoueurs.insert(std::pair<int, Joueur*>(joueurs[2]->tid, joueurs[0]));
+    
     
     // Creation des deux autres thread
     pthread_t accueil_t;
@@ -219,22 +251,22 @@ int main (int argc, char **argv)
         
         if (pthread_mutex_trylock(&file1_lock) == 0 && file1.size() < 4)
         {
-            _MessageCJ* msg = new _MessageCJ();
+            MessageCJ* msg = new MessageCJ();
             msg->colonne = empty[0];
             msg->ligne = empty[1];
         
             bool duplicate = false;
-            std::queue<_MessageCJ*> temp;
+            std::queue<MessageCJ*> temp;
             
             while(!file1.empty())
             {
-                temp.push(new _MessageCJ((*file1.front())));
+                temp.push(new MessageCJ((*file1.front())));
                 file1.pop();
             }
             
             while(!temp.empty())
             {
-                _MessageCJ* tmpMsg = new _MessageCJ((*temp.front()));
+                MessageCJ* tmpMsg = new MessageCJ((*temp.front()));
                 file1.push(tmpMsg);
                 temp.pop();
                 if (tmpMsg->colonne == msg->colonne && tmpMsg->ligne == msg->ligne)
@@ -279,19 +311,27 @@ int main (int argc, char **argv)
                 {
                     //If win!
                     grille[msg->colonne][msg->ligne] = msg->choice;
+                    Joueur* vainqueur = listeJoueurs.find(msg->tid)->second;
+                    vainqueur->score++;
                 }
                 else
                 {
                     //if noob!
+                    Joueur* looser = listeJoueurs.find(msg->tid)->second;
+                    looser->score--;
+                    if (looser->score <= -10)
+                        eliminateLooser(&listeJoueurs, msg->tid, joueurs);
                     std::cout<<"Better luck next time, NOOB!"<<std::endl;
+                    
                 }
             }
             else
             {
                 sleep(1);
-            }
-            
+            }   
         }
+        
+        
     }while (empty != 0);
     
     
