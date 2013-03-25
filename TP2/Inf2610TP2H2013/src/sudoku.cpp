@@ -32,7 +32,7 @@ void* accueil(void* arg);
 void* minuterie (void* arg);
 
 ///////////////////////////////////// GLOBAL VARIABLES //////////////////////////////////////////////
-std::queue<_MessageCJ*> file1();
+std::queue<_MessageCJ*> file1;
 
 //Gestionnaire de signal
 void sigHandler(int arg)
@@ -49,7 +49,7 @@ void loadGrid(std::string path, int (&grid)[9][9])
     {
         for (int j = 0; j < 9; j++)
         {
-            file >> grid[i][j];
+            file >> grid[j][i];
         }
     }
     file.close();
@@ -61,11 +61,68 @@ void printGrid(int (&grid)[9][9])
     {
         for (int j = 0; j < 9; j++)
         {
-            std::cout << grid[i][j];
+            std::cout << grid[j][i];
         }
         std::cout<<std::endl;
     }
 }
+
+int* findEmpty(int (&grid)[9][9])
+{
+    int* cell = 0;
+    
+    for (int i = 0; i < 9; i++)
+    {
+        for (int j = 0; j < 9; j++)
+        {
+            if (grid[j][i] != 0)
+                continue;
+            cell = new int[2];
+            cell[0] = j;
+            cell[1] = i;
+            return cell;
+        }   
+    }
+    
+    return cell;
+}
+
+int* findEmpty(int (&grid)[9][9], int x, int y)
+{
+    int* cell = 0;
+    
+    for (int i = x; i < 9; i++)
+    {
+        for (int j = y + 1; j < 9; j++)
+        {
+            if (grid[j][i] != 0)
+                continue;
+            cell = new int[2];
+            cell[0] = j;
+            cell[1] = i;
+            return cell;
+        }   
+    }
+    
+    for (int i = 0; i <= x; i++)
+    {
+        for (int j = 0; j < 9; j++)
+        {
+            if (i == x && j == y) //Condifitons initiales => boucle finie
+                return cell;
+            
+            if (grid[j][i] != 0)
+                continue;
+            cell = new int[2];
+            cell[0] = j;
+            cell[1] = i;
+            return cell;
+        }   
+    }
+    
+    return cell;
+}
+
 
 //Exécutée par le thread principal (contrôleur)
 int main (int argc, char **argv)
@@ -104,6 +161,51 @@ int main (int argc, char **argv)
     
     pthread_create(&accueil_t, NULL, accueil, NULL);
     pthread_create(&alarm_t, NULL, minuterie, NULL);
+    
+    int* empty = findEmpty(grille);
+    do
+    {
+        if (empty == 0)
+            break;
+        
+        if (file1.size() < 4)
+        {
+            _MessageCJ* msg = new _MessageCJ();
+            msg->colonne = empty[0];
+            msg->ligne = empty[1];
+        
+            bool duplicate = false;
+            std::queue<_MessageCJ*> temp;
+            while(!file1.empty())
+            {
+                temp.push(new _MessageCJ((*file1.front())));
+                file1.pop();
+            }
+            
+            while(!temp.empty())
+            {
+                _MessageCJ* tmpMsg = new _MessageCJ((*temp.front()));
+                file1.push(tmpMsg);
+                temp.pop();
+                if (tmpMsg->colonne == msg->colonne && tmpMsg->ligne == msg->ligne)
+                    duplicate = true;
+                
+            }
+            
+            if (!duplicate)
+                file1.push(msg);
+            
+            delete empty;
+            empty = findEmpty(grille, msg->colonne, msg->ligne);
+//             std::cout<<"Finding more empty cells"<<std::endl;
+        }
+        else
+        {
+//             std::cout<<"Queue 1 is full!"<<std::endl;
+        }
+        
+    }while (empty != 0);
+    
     
   return EXIT_SUCCESS;
   
