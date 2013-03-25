@@ -22,7 +22,8 @@
 
 
 ////////////////////////////////////////// DEFINES //////////////////////////////////////////////////
-
+#define EXIT_SUCCESS 0
+#define EXIT_FAILIURE 1
 
 ///////////////////////////////////// GLOBAL VARIABLES //////////////////////////////////////////////
 
@@ -34,13 +35,56 @@ void sigHandler(int arg)
 }
 
 /**************************************** MAIN *****************************************************/
+void loadGrid(std::string path, int (&grid)[9][9])
+{
+    std::ifstream file;
+    file.open(path.c_str());
+    for (int i = 0; i < 9; i++)
+    {
+        for (int j = 0; j < 9; j++)
+        {
+            file >> grid[i][j];
+        }
+    }
+    file.close();
+}
+
+void printGrid(int (&grid)[9][9])
+{
+    
+    for (int i = 0; i < 9; i++)
+    {
+        for (int j = 0; j < 9; j++)
+        {
+            std::cout << grid[i][j];
+        }
+        std::cout<<std::endl;
+    }
+}
+
 //Exécutée par le thread principal (contrôleur)
 int main (int argc, char **argv)
 {
-
-
-		
+    if (argc != 6)
+        return EXIT_FAILIURE;
+	
+	std::string pathGrilleVide = argv[1];
+	std::string pathGrilleSolution = argv[2];
+	std::string pathArrivee = argv[3];
+	std::string tempsMax = argv[4];
+	std::string pathResultat = argv[5];
+    
+    int grille[9][9];
+    int solution[9][9];
+    
+    loadGrid(pathGrilleVide, grille);
+//     printGrid(grille);
+    
+    loadGrid(pathGrilleSolution, solution);
+// 	printGrid(solution);
+    
   return EXIT_SUCCESS;
+  
 }
 ////////////////////////////////////////// THREAD FUNCTIONS //////////////////////////////////////////////////
 
