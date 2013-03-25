@@ -36,14 +36,19 @@ void* minuterie (void* arg);
 ///////////////////////////////////// GLOBAL VARIABLES //////////////////////////////////////////////
 std::queue<_MessageCJ*> file1;
 std::queue<_MessageJC*> file2;
+std::queue<int> nouveauxJoueurs;
+
 pthread_mutex_t file1_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t file2_lock = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t nouveauJoueurs_lock = PTHREAD_MUTEX_INITIALIZER;
 
 
 //condition pour la lecture
 pthread_cond_t nonEmpty = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t player_mutex = PTHREAD_MUTEX_INITIALIZER;
 
+Joueur* joueurs[5];
+std::map<int, Joueur*> listeJoueurs;
 int tidCount = 3;
 
 //Gestionnaire de signal
@@ -207,7 +212,6 @@ int main (int argc, char **argv)
 // 	printGrid(solution);
 
     //creaation des thread joueur par defaut
-    Joueur* joueurs[5];
     
     joueurs[0] = new Joueur();
     joueurs[1] = new Joueur();
@@ -226,7 +230,6 @@ int main (int argc, char **argv)
     joueurs[2]->tid = 3;
     
     
-    std::map<int, Joueur*> listeJoueurs;
     listeJoueurs.insert(std::pair<int, Joueur*>(joueurs[0]->tid, joueurs[0]));
     listeJoueurs.insert(std::pair<int, Joueur*>(joueurs[1]->tid, joueurs[0]));
     listeJoueurs.insert(std::pair<int, Joueur*>(joueurs[2]->tid, joueurs[0]));
@@ -236,7 +239,7 @@ int main (int argc, char **argv)
     pthread_t accueil_t;
     pthread_t alarm_t;
     
-    pthread_create(&accueil_t, NULL, accueil, NULL);
+    pthread_create(&accueil_t, NULL, accueil, (void*)pathArrivee.c_str());
     pthread_create(&alarm_t, NULL, minuterie, NULL);
     
     int* empty = findEmpty(grille);
@@ -285,6 +288,7 @@ int main (int argc, char **argv)
                 
                 file1.push(msg);
                 pthread_cond_broadcast(&nonEmpty);
+                std::cout<<"Shake that monitor"<<std::endl;
             }
             pthread_mutex_unlock( &file1_lock );
             
@@ -351,7 +355,24 @@ void* minuterie (void* arg){
 /**************************************** thread_Accueil*****************************************************/
 //Function execute par le thread_Accueil
 void* accueil(void* arg){
-
+    std::ifstream file;
+    file.open((char*)arg);
+    
+    int delay;
+    while(!file.eof())
+    {
+        file>>delay;
+        sleep(delay);
+        
+        pthread_mutex_lock(&nouveauJoueurs_lock);
+        Joueur* j = new Joueur();
+        j->thread = pthread_t();
+        tidCount++;
+        j->tid = tidCount;
+        nouveauxJoueurs.push(tidCount);
+        std::cout<<"Player added with id : "<<j->tid<<std::endl;
+        pthread_mutex_unlock(&nouveauJoueurs_lock);
+    }
 
 }
 /**************************************** thread_Joueur*****************************************************/
