@@ -154,10 +154,10 @@ std::list<int> getOptions (int (&grid)[9][9], int x, int y)
     
     for(int i = (x / 3) * 3 ; i < (x / 3) * 3 + 3; i++)
     {
-        for(int i = (x / 3) * 3 ; i < (x / 3) * 3 + 3; i++)
+        for(int j = (x / 3) * 3 ; j < (x / 3) * 3 + 3; j++)
         {
-            if (grid[i][y] != 0)
-                set[grid[i][y] - 1] = false;
+            if (grid[i][j] != 0)
+                set[grid[i][j] - 1] = false;
         }
     }
     
@@ -211,11 +211,13 @@ int main (int argc, char **argv)
     
     do
     {
+        //============================================================
+        // BOUCLE POUR TROUVER LES ZERO ET LES ENVOYER DANS LA FILE 1 
         if (empty == 0)
             break;
         
-        pthread_mutex_lock(&file1_lock);
-        if (file1.size() < 4)
+        
+        if (pthread_mutex_trylock(&file1_lock) == 0 && file1.size() < 4)
         {
             _MessageCJ* msg = new _MessageCJ();
             msg->colonne = empty[0];
@@ -263,6 +265,33 @@ int main (int argc, char **argv)
 //             std::cout<<"Queue 1 is full!"<<std::endl;
         }
         
+        //==========================
+        //BOUCLE POUR LIRE LA FILE 2 
+        
+        if(pthread_mutex_trylock(&file2_lock) == 0)
+        {
+            if (file2.size() > 0)
+            {
+                _MessageJC* msg = new _MessageJC((*file2.front()));
+                file2.pop();
+                
+                if (solution[msg->colonne][msg->ligne] == msg->choice)
+                {
+                    //If win!
+                    grille[msg->colonne][msg->ligne] = msg->choice;
+                }
+                else
+                {
+                    //if noob!
+                    std::cout<<"Better luck next time, NOOB!"<<std::endl;
+                }
+            }
+            else
+            {
+                sleep(1);
+            }
+            
+        }
     }while (empty != 0);
     
     
