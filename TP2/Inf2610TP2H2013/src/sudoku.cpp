@@ -33,6 +33,7 @@ void* minuterie (void* arg);
 
 ///////////////////////////////////// GLOBAL VARIABLES //////////////////////////////////////////////
 std::queue<_MessageCJ*> file1;
+pthread_mutex_t file1_lock = PTHREAD_MUTEX_INITIALIZER;
 
 //Gestionnaire de signal
 void sigHandler(int arg)
@@ -123,7 +124,44 @@ int* findEmpty(int (&grid)[9][9], int x, int y)
     return cell;
 }
 
-
+std::list<int> getOptions (int (&grid)[9][9], int x, int y)
+{
+    std::list<int> opt;
+    
+    bool set[9];
+    
+    for (int i = 0; i < 9; i++)
+        set[i] = true;
+    
+    for(int i = 0; i < 9; i++)
+    {
+        if (grid[x][i] != 0)
+            set[grid[x][i] - 1] = false;
+    }
+    
+    for(int i = 0; i < 9; i++)
+    {
+        if (grid[i][y] != 0)
+            set[grid[i][y] - 1] = false;
+    }
+    
+    for(int i = (x / 3) * 3 ; i < (x / 3) * 3 + 3; i++)
+    {
+        for(int i = (x / 3) * 3 ; i < (x / 3) * 3 + 3; i++)
+        {
+            if (grid[i][y] != 0)
+                set[grid[i][y] - 1] = false;
+        }
+    }
+    
+    for(int i = 0; i < 9; i++)
+    {
+        if(set[i])
+            opt.push_back(i + 1);
+    }
+    
+    return opt;
+}
 //Exécutée par le thread principal (contrôleur)
 int main (int argc, char **argv)
 {
@@ -163,6 +201,7 @@ int main (int argc, char **argv)
     pthread_create(&alarm_t, NULL, minuterie, NULL);
     
     int* empty = findEmpty(grille);
+    
     do
     {
         if (empty == 0)
@@ -176,6 +215,8 @@ int main (int argc, char **argv)
         
             bool duplicate = false;
             std::queue<_MessageCJ*> temp;
+            
+            pthread_mutex_lock(&file1_lock);
             while(!file1.empty())
             {
                 temp.push(new _MessageCJ((*file1.front())));
@@ -193,7 +234,17 @@ int main (int argc, char **argv)
             }
             
             if (!duplicate)
+            {
+                std::list<int> opts = getOptions(grille, msg->colonne, msg->ligne);
+    
+                for(std::list<int>::iterator it = opts.begin(); it != opts.end(); it++)
+                {
+                    std::cout<<*it<<std::endl;
+                }
+                
                 file1.push(msg);
+            }
+            pthread_mutex_unlock( &file1_lock );
             
             delete empty;
             empty = findEmpty(grille, msg->colonne, msg->ligne);
