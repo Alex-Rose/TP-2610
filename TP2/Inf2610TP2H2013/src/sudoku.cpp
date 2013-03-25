@@ -46,6 +46,8 @@ pthread_cond_t nonEmpty = PTHREAD_COND_INITIALIZER;
 pthread_cond_t nonFullFile2 = PTHREAD_COND_INITIALIZER;
 
 
+int tidCount = 3;
+
 //Gestionnaire de signal
 void sigHandler(int arg)
 {
@@ -158,10 +160,10 @@ std::list<int> getOptions (int (&grid)[9][9], int x, int y)
     
     for(int i = (x / 3) * 3 ; i < (x / 3) * 3 + 3; i++)
     {
-        for(int i = (x / 3) * 3 ; i < (x / 3) * 3 + 3; i++)
+        for(int j = (x / 3) * 3 ; j < (x / 3) * 3 + 3; j++)
         {
-            if (grid[i][y] != 0)
-                set[grid[i][y] - 1] = false;
+            if (grid[i][j] != 0)
+                set[grid[i][j] - 1] = false;
         }
     }
     
@@ -173,6 +175,18 @@ std::list<int> getOptions (int (&grid)[9][9], int x, int y)
     
     return opt;
 }
+
+void eliminateLooser(std::map<int, Joueur*>* listeJoueurs, int tid, Joueur** joueursActifs)
+{
+    pthread_cancel(listeJoueurs->find(tid)->second->thread);
+    
+    for(int i = 0; i < 5; i++)
+    {
+        if (joueursActifs[i] != 0 && joueursActifs[i]->tid == tid)
+            joueursActifs[i] = 0;
+    }
+}
+
 //Execute par le thread principal (controleur)
 int main (int argc, char **argv)
 {
@@ -195,14 +209,30 @@ int main (int argc, char **argv)
 // 	printGrid(solution);
 
     //creaation des thread joueur par defaut
-    pthread_t joueurs[5];
-    joueurs[0] = pthread_t();
-    joueurs[1] = pthread_t();
-    joueurs[2] = pthread_t();
+    Joueur* joueurs[5];
     
-    pthread_create(&joueurs[0], NULL, jouer, NULL);
-    pthread_create(&joueurs[1], NULL, jouer, NULL);
-    pthread_create(&joueurs[2], NULL, jouer, NULL);
+    joueurs[0] = new Joueur();
+    joueurs[1] = new Joueur();
+    joueurs[2] = new Joueur();
+    
+    joueurs[0]->thread = pthread_t();
+    joueurs[1]->thread = pthread_t();
+    joueurs[2]->thread = pthread_t();
+    
+    pthread_create(&joueurs[0]->thread, NULL, jouer, (void*)1);
+    pthread_create(&joueurs[1]->thread, NULL, jouer, (void*)2);
+    pthread_create(&joueurs[2]->thread, NULL, jouer, (void*)3);
+    
+    joueurs[0]->tid = 1;
+    joueurs[1]->tid = 2;
+    joueurs[2]->tid = 3;
+    
+    
+    std::map<int, Joueur*> listeJoueurs;
+    listeJoueurs.insert(std::pair<int, Joueur*>(joueurs[0]->tid, joueurs[0]));
+    listeJoueurs.insert(std::pair<int, Joueur*>(joueurs[1]->tid, joueurs[0]));
+    listeJoueurs.insert(std::pair<int, Joueur*>(joueurs[2]->tid, joueurs[0]));
+    
     
     // Creation des deux autres thread
     pthread_t accueil_t;
@@ -215,28 +245,30 @@ int main (int argc, char **argv)
     
     do
     {
+        //============================================================
+        // BOUCLE POUR TROUVER LES ZERO ET LES ENVOYER DANS LA FILE 1 
         if (empty == 0)
             break;
         
-        pthread_mutex_lock(&file1_lock);
-        if (file1.size() < 4)
+        
+        if (pthread_mutex_trylock(&file1_lock) == 0 && file1.size() < 4)
         {
-            _MessageCJ* msg = new _MessageCJ();
+            MessageCJ* msg = new MessageCJ();
             msg->colonne = empty[0];
             msg->ligne = empty[1];
         
             bool duplicate = false;
-            std::queue<_MessageCJ*> temp;
+            std::queue<MessageCJ*> temp;
             
             while(!file1.empty())
             {
-                temp.push(new _MessageCJ((*file1.front())));
+                temp.push(new MessageCJ((*file1.front())));
                 file1.pop();
             }
             
             while(!temp.empty())
             {
-                _MessageCJ* tmpMsg = new _MessageCJ((*temp.front()));
+                MessageCJ* tmpMsg = new MessageCJ((*temp.front()));
                 file1.push(tmpMsg);
                 temp.pop();
                 if (tmpMsg->colonne == msg->colonne && tmpMsg->ligne == msg->ligne)
@@ -250,10 +282,12 @@ int main (int argc, char **argv)
     
                 for(std::list<int>::iterator it = opts.begin(); it != opts.end(); it++)
                 {
-                    std::cout<<*it<<std::endl;
+                  //  std::cout<<*it<<std::endl;
                 }
                 
                 file1.push(msg);
+                pthread_cond_broadcast(&nonEmpty);
+		std::cout<<"je viens de broadcast"<<std::endl;
             }
             pthread_mutex_unlock( &file1_lock );
             
@@ -266,6 +300,41 @@ int main (int argc, char **argv)
 //             std::cout<<"Queue 1 is full!"<<std::endl;
         }
         
+        //==========================
+        //BOUCLE POUR LIRE LA FILE 2 
+        
+        if(pthread_mutex_trylock(&file2_lock) == 0)
+        {
+            if (file2.size() > 0)
+            {
+                _MessageJC* msg = new _MessageJC((*file2.front()));
+                file2.pop();
+                
+                if (solution[msg->colonne][msg->ligne] == msg->choice)
+                {
+                    //If win!
+                    grille[msg->colonne][msg->ligne] = msg->choice;
+                    Joueur* vainqueur = listeJoueurs.find(msg->tid)->second;
+                    vainqueur->score++;
+                }
+                else
+                {
+                    //if noob!
+                    Joueur* looser = listeJoueurs.find(msg->tid)->second;
+                    looser->score--;
+                    if (looser->score <= -10)
+                        eliminateLooser(&listeJoueurs, msg->tid, joueurs);
+                    std::cout<<"Better luck next time, NOOB!"<<std::endl;
+                    
+                }
+            }
+            else
+            {
+                sleep(1);
+            }   
+        }
+        
+        
     }while (empty != 0);
     
     
@@ -277,7 +346,7 @@ int main (int argc, char **argv)
 /**************************************** thread_Alarm*****************************************************/
 //Function execute par le thread_Alarm
 void* minuterie (void* arg){
-//Dormir pendant la durïee maximale requise
+//Dormir pendant la durï¿½ee maximale requise
 
 //Envoyer un sIGALRM au thread principal
 
@@ -301,45 +370,42 @@ void* jouer(void* arg){
   while(1){
     
     
-    // lecture dans la file 1
-    pthread_mutex_lock(&file1_lock);
+     //lecture dans la file 1
+   pthread_mutex_lock(&file1_lock);
+   std::cout <<"mutex bloque"<<std::endl;
     
     while(file1.size()==0){
+      std::cout<<"test dans ta maman "<<file1.size()<<std::endl;
       pthread_cond_wait(&nonEmpty,&file1_lock);
     }
-    
+   // 
     currentMessage=file1.front();
     std::pair<int,int> currentPair(currentMessage->ligne,currentMessage->colonne);
     
     std::cout<<"je suis "<< currentPair.first<<" "<<currentPair.second<<std::endl;
+    file1.pop();
     
     
-    //for(std::list<int>::const_iterator it = currentMessage->choiceList.begin();
-	//it!=currentMessage->choiceList.end();it++){
-     
-      
-      
-      
-      
-  //  }
 
      
     
-    file1.pop();
+   // file1.pop();
     
     pthread_mutex_unlock(&file1_lock);
+    
+    std::cout<<"le mutex a ete debloque"<<std::endl;
     
     
     
     
     //ecriture du resultat sur la file 2
-    pthread_mutex_lock(&file2_lock);
+// pthread_mutex_lock(&file2_lock);
     
-    while(file2.size()>5)
-      pthread_cond_wait(&nonFullFile2, &file2_lock);
+    //while(file2.size()>5)
+     // pthread_cond_wait(&nonFullFile2, &file2_lock);
     
     
-    pthread_mutex_unlock(&file2_lock);
+    //pthread_mutex_unlock(&file2_lock);
     
     
     

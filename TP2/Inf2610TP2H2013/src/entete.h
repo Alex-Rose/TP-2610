@@ -10,6 +10,8 @@
 #define entete_H
 
 #include <list>
+#include <utility>
+#include <pthread.h>
 
 /****************************************************************************************************
  * 
@@ -41,4 +43,14 @@ typedef struct _MessageJC {
 		tid=ligne= colonne=choice= -1;
 	}
 } MessageJC;
+
+typedef struct _Joueur {
+    int tid;
+    int score;
+    pthread_t thread;
+    _Joueur(){
+        tid= -1;
+        score=thread = 0;
+    }
+} Joueur;
 #endif /* fin entete_H*/
