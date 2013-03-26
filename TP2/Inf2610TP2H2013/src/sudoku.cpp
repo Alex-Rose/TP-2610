@@ -22,6 +22,7 @@
 #include <list>
 #include <utility>
 #include <map>
+#include <algorithm>
 
 
 
@@ -45,7 +46,8 @@ pthread_mutex_t nouveauJoueurs_lock = PTHREAD_MUTEX_INITIALIZER;
 
 //condition pour la lecture
 pthread_cond_t nonEmpty = PTHREAD_COND_INITIALIZER;
-pthread_mutex_t player_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t nonFullFile2 = PTHREAD_COND_INITIALIZER;
+
 
 Joueur* joueurs[5];
 std::map<int, Joueur*> listeJoueurs;
@@ -252,54 +254,59 @@ int main (int argc, char **argv)
             break;
         
         
-        if (pthread_mutex_trylock(&file1_lock) == 0 && file1.size() < 4)
+        if (pthread_mutex_trylock(&file1_lock) == 0)
         {
-            MessageCJ* msg = new MessageCJ();
-            msg->colonne = empty[0];
-            msg->ligne = empty[1];
-        
-            bool duplicate = false;
-            std::queue<MessageCJ*> temp;
-            
-            while(!file1.empty())
+            if (file1.size() < 4)
             {
-                temp.push(new MessageCJ((*file1.front())));
-                file1.pop();
-            }
+                MessageCJ* msg = new MessageCJ();
+                msg->colonne = empty[0];
+                msg->ligne = empty[1];
             
-            while(!temp.empty())
-            {
-                MessageCJ* tmpMsg = new MessageCJ((*temp.front()));
-                file1.push(tmpMsg);
-                temp.pop();
-                if (tmpMsg->colonne == msg->colonne && tmpMsg->ligne == msg->ligne)
-                    duplicate = true;
+                bool duplicate = false;
+                std::queue<MessageCJ*> temp;
                 
-            }
-            
-            if (!duplicate)
-            {
-                std::list<int> opts = getOptions(grille, msg->colonne, msg->ligne);
-    
-                for(std::list<int>::iterator it = opts.begin(); it != opts.end(); it++)
+                while(!file1.empty())
                 {
-                    std::cout<<*it<<std::endl;
+                    temp.push(new MessageCJ((*file1.front())));
+                    file1.pop();
                 }
                 
-                file1.push(msg);
-                pthread_cond_broadcast(&nonEmpty);
-                std::cout<<"Shake that monitor"<<std::endl;
+                while(!temp.empty())
+                {
+                    MessageCJ* tmpMsg = new MessageCJ((*temp.front()));
+                    file1.push(tmpMsg);
+                    temp.pop();
+                    if (tmpMsg->colonne == msg->colonne && tmpMsg->ligne == msg->ligne)
+                        duplicate = true;
+                    
+                }
+                
+                if (!duplicate)
+                {
+                    std::list<int> opts = getOptions(grille, msg->colonne, msg->ligne);
+        
+                    for(std::list<int>::iterator it = opts.begin(); it != opts.end(); it++)
+                    {
+                    //  std::cout<<*it<<std::endl;
+                    }
+                    
+                    file1.push(msg);
+                    pthread_cond_broadcast(&nonEmpty);
+                    std::cout<<"je viens de broadcast"<<std::endl;
+                }
+                pthread_mutex_unlock( &file1_lock );
+                
+                delete empty;
+                empty = findEmpty(grille, msg->colonne, msg->ligne);
+    //             std::cout<<"Finding more empty cells"<<std::endl;
             }
-            pthread_mutex_unlock( &file1_lock );
+        }
+        //pthread_mutex_unlock( &file1_lock );
+           // pthread_cond_broadcast(&nonEmpty);
+             
             
-            delete empty;
-            empty = findEmpty(grille, msg->colonne, msg->ligne);
-//             std::cout<<"Finding more empty cells"<<std::endl;
-        }
-        else
-        {
 //             std::cout<<"Queue 1 is full!"<<std::endl;
-        }
+        
         
         //==========================
         //BOUCLE POUR LIRE LA FILE 2 
@@ -328,9 +335,11 @@ int main (int argc, char **argv)
                     std::cout<<"Better luck next time, NOOB!"<<std::endl;
                     
                 }
+                pthread_mutex_unlock(&file2_lock);
             }
             else
             {
+                pthread_mutex_unlock(&file2_lock);
                 sleep(1);
             }   
         }
@@ -347,7 +356,7 @@ int main (int argc, char **argv)
 /**************************************** thread_Alarm*****************************************************/
 //Function execute par le thread_Alarm
 void* minuterie (void* arg){
-//Dormir pendant la durïee maximale requise
+//Dormir pendant la durï¿½ee maximale requise
 
 //Envoyer un sIGALRM au thread principal
 
@@ -373,6 +382,12 @@ void* accueil(void* arg){
         std::cout<<"Player added with id : "<<j->tid<<std::endl;
         pthread_mutex_unlock(&nouveauJoueurs_lock);
     }
+    
+    pthread_mutex_lock(&nouveauJoueurs_lock);
+    nouveauxJoueurs.push(0);
+    pthread_mutex_unlock(&nouveauJoueurs_lock);
+    
+    pthread_exit(EXIT_SUCCESS);
 
 }
 /**************************************** thread_Joueur*****************************************************/
@@ -381,25 +396,49 @@ void* jouer(void* arg){
   
  
   MessageCJ* currentMessage;
+  std::map<std::pair<int,int>,std::list<int> > alreadyTry;
+  std::list<int>::iterator findIter;
   
   
   while(1){
     
-    pthread_mutex_lock(&player_mutex);
+    
+     //lecture dans la file 1
+   pthread_mutex_lock(&file1_lock);
+   std::cout <<"mutex bloque"<<std::endl;
     
     while(file1.size()==0){
+      std::cout<<"test dans ta maman "<<file1.size()<<std::endl;
       pthread_cond_wait(&nonEmpty,&file1_lock);
     }
-    
+   // 
     currentMessage=file1.front();
+    std::pair<int,int> currentPair(currentMessage->ligne,currentMessage->colonne);
     
-    //travaiol sur le message a faire ici
-    
+    std::cout<<"je suis "<< currentPair.first<<" "<<currentPair.second<<std::endl;
     file1.pop();
+    
+    
+
+     
+    
+   // file1.pop();
     
     pthread_mutex_unlock(&file1_lock);
     
-    pthread_mutex_lock(&file2_lock);
+    std::cout<<"le mutex a ete debloque"<<std::endl;
+    
+    
+    
+    
+    //ecriture du resultat sur la file 2
+// pthread_mutex_lock(&file2_lock);
+    
+    //while(file2.size()>5)
+     // pthread_cond_wait(&nonFullFile2, &file2_lock);
+    
+    
+    //pthread_mutex_unlock(&file2_lock);
     
     
     
