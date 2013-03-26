@@ -24,6 +24,9 @@
 #include <map>
 #include <algorithm>
 #include <signal.h>
+#include <time.h>
+
+
 
 
 ////////////////////////////////////////// DEFINES //////////////////////////////////////////////////
@@ -328,6 +331,7 @@ int main (int argc, char **argv)
                 
                 while(!file1.empty())
                 {
+		
                     temp.push(new MessageCJ((*file1.front())));
                     file1.pop();
                 }
@@ -349,8 +353,10 @@ int main (int argc, char **argv)
                     msg->choiceList = opts;
                     file1.push(msg);
                     pthread_cond_broadcast(&nonEmpty);
-//                     std::cout<<"je viens de broadcast"<<std::endl;
+                    
+		
                 }
+            
                 pthread_mutex_unlock( &file1_lock );
                 
                 delete empty;
@@ -420,7 +426,7 @@ int main (int argc, char **argv)
                             nouveauxJoueurs.pop();
                             joueurs[i] = listeJoueurs.find(id)->second;
                             playerCount++;
-                            std::cout<<"Nouveau joueur actif : "<<id<<std::endl;
+                            pthread_create(&joueurs[i]->thread, NULL, jouer, (void*)joueurs[i]->tid);
                         }
                     }
                 }
@@ -484,6 +490,9 @@ void* jouer(void* arg){
   MessageCJ* currentMessage;
   std::map<std::pair<int,int>,std::list<int> > alreadyTry;
   std::list<int>::iterator findIter;
+  int randomNumber;
+  
+  srand(time(NULL));
   
   
   while(1){
@@ -491,17 +500,73 @@ void* jouer(void* arg){
     
      //lecture dans la file 1
    pthread_mutex_lock(&file1_lock);
-//    std::cout <<"mutex bloque"<<std::endl;
+   
     
     while(file1.size()==0){
-//       std::cout<<"test dans ta maman "<<file1.size()<<std::endl;
+      
       pthread_cond_wait(&nonEmpty,&file1_lock);
+      
     }
-   // 
+    
+   // prend le message et verifie si les valeurs sont deja tester
+   
     currentMessage=file1.front();
     std::pair<int,int> currentPair(currentMessage->ligne,currentMessage->colonne);
     
-//     std::cout<<"je suis "<< currentPair.first<<" "<<currentPair.second<<std::endl;
+    std::cout<<"je suis "<< currentPair.first<<" "<<currentPair.second<< "  et je suis le thread numero mother fucker"<<std::endl;
+    
+    for(std::list<int>::iterator it = alreadyTry[currentPair].begin();it!=alreadyTry[currentPair].end();it++)
+      
+    {
+	currentMessage->choiceList.remove(*it);
+	
+      
+      
+      
+    }
+    
+    
+    
+    // select choice of response
+    if(!currentMessage->choiceList.empty())
+    {
+    
+    randomNumber = rand()%currentMessage->choiceList.size();
+    
+    std::list<int>::iterator ite = currentMessage->choiceList.begin();
+    
+    std::advance(ite,randomNumber);
+    
+    alreadyTry[currentPair].push_back(*ite);
+    
+    for(std::list<int>::iterator it1 = currentMessage->choiceList.begin(); it1!=currentMessage->choiceList.end();it1++)
+    {
+      
+      std::cout<<(*it1)<<"  ";
+      
+      
+    }
+    
+    
+    }
+    else 
+    {
+      std::cout<<"je suis vide"<<std::endl;
+      
+      
+      
+    }
+    
+    std::cout<<std::endl;
+    for(std::list<int>::iterator it1 = alreadyTry[currentPair].begin(); it1!=alreadyTry[currentPair].end();it1++)
+    {
+      
+      std::cout<<(*it1)<<"  ";
+      
+      
+    }
+    std::cout<<std::endl;
+    std::cout<<std::endl;
     file1.pop();
     
     
@@ -509,10 +574,10 @@ void* jouer(void* arg){
      
     
    // file1.pop();
-    
+    delete currentMessage;
     pthread_mutex_unlock(&file1_lock);
     
-//     std::cout<<"le mutex a ete debloque"<<std::endl;
+    
     
     
     
