@@ -262,6 +262,7 @@ int main (int argc, char **argv)
             
             while(!file1.empty())
             {
+		//sleep(1);
                 temp.push(new MessageCJ((*file1.front())));
                 file1.pop();
             }
@@ -288,7 +289,9 @@ int main (int argc, char **argv)
                 file1.push(msg);
                 pthread_cond_broadcast(&nonEmpty);
 		std::cout<<"je viens de broadcast"<<std::endl;
+		std::cout<<file1.size()<<std::endl;
             }
+            std::cout<<"je suis release"<<std::endl;
             pthread_mutex_unlock( &file1_lock );
             
             delete empty;
@@ -333,8 +336,8 @@ int main (int argc, char **argv)
                 sleep(1);
             }   
         }
-        
-        
+       
+        sleep(1);
     }while (empty != 0);
     
     
@@ -375,8 +378,9 @@ void* jouer(void* arg){
    std::cout <<"mutex bloque"<<std::endl;
     
     while(file1.size()==0){
-      std::cout<<"test dans ta maman "<<file1.size()<<std::endl;
+      std::cout<<"test avant "<<file1.size()<<std::endl;
       pthread_cond_wait(&nonEmpty,&file1_lock);
+      std::cout<<"test apres"<<std::endl;
     }
    // 
     currentMessage=file1.front();
