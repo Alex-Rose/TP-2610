@@ -553,6 +553,7 @@ void* jouer(void* arg){
     else 
     {
       std::cout<<"je suis vide"<<std::endl;
+      numberChoice=0;
       
       
       
@@ -581,23 +582,21 @@ void* jouer(void* arg){
     
     
     
-    sleep(2);
+   // sleep(2);
     
     //ecriture du resultat sur la file 2
-//pthread_mutex_lock(&file2_lock);
+     pthread_mutex_lock(&file2_lock);
     
-    //while(file2.size()>3)
-   //pthread_cond_wait(&nonFullFile2, &file2_lock);
-    /*
     MessageJC* messageRetour= new MessageJC();
     messageRetour->ligne=currentPair.first;
     messageRetour->colonne=currentPair.second;
     messageRetour->tid=*(int*)arg;
     messageRetour->choice=numberChoice;
     file2.push(messageRetour);
+    
     pthread_mutex_unlock(&file2_lock);
     
-    */
+    
     
   //std::cout<<indice<<std::endl;
     //indice++;
