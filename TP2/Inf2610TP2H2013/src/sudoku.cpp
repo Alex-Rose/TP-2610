@@ -52,6 +52,7 @@ pthread_cond_t nonFullFile2 = PTHREAD_COND_INITIALIZER;
 Joueur* joueurs[5];
 std::map<int, Joueur*> listeJoueurs;
 int tidCount = 3;
+int playerCount = 3;
 
 //Gestionnaire de signal
 void sigHandler(int arg)
@@ -184,12 +185,16 @@ std::list<int> getOptions (int (&grid)[9][9], int x, int y)
 void eliminateLooser(std::map<int, Joueur*>* listeJoueurs, int tid, Joueur** joueursActifs)
 {
     pthread_cancel(listeJoueurs->find(tid)->second->thread);
-    
+    pthread_mutex_lock(&nouveauJoueurs_lock);
     for(int i = 0; i < 5; i++)
     {
         if (joueursActifs[i] != 0 && joueursActifs[i]->tid == tid)
+        {
             joueursActifs[i] = 0;
+            playerCount--;
+        }
     }
+    pthread_mutex_unlock(&nouveauJoueurs_lock);
 }
 
 //Execute par le thread principal (controleur)
@@ -212,6 +217,11 @@ int main (int argc, char **argv)
     
     loadGrid(pathGrilleSolution, solution);
 // 	printGrid(solution);
+
+    for (int i = 0; i < 5; i++)
+    {
+        joueurs[i] == 0;
+    }
 
     //creaation des thread joueur par defaut
     
@@ -285,14 +295,10 @@ int main (int argc, char **argv)
                 {
                     std::list<int> opts = getOptions(grille, msg->colonne, msg->ligne);
         
-                    for(std::list<int>::iterator it = opts.begin(); it != opts.end(); it++)
-                    {
-                    //  std::cout<<*it<<std::endl;
-                    }
-                    
+                    msg->choiceList = opts;
                     file1.push(msg);
                     pthread_cond_broadcast(&nonEmpty);
-                    std::cout<<"je viens de broadcast"<<std::endl;
+//                     std::cout<<"je viens de broadcast"<<std::endl;
                 }
                 pthread_mutex_unlock( &file1_lock );
                 
@@ -343,12 +349,29 @@ int main (int argc, char **argv)
                 sleep(1);
             }   
         }
-        
+            
+        pthread_mutex_lock(&nouveauJoueurs_lock);
+        if (playerCount < 5 && nouveauxJoueurs.size() > 0)
+        {
+            for (int i = 0; i < 5; i++)
+            {
+                if (joueurs[i] == 0)
+                {
+                    int id = nouveauxJoueurs.front();
+                    nouveauxJoueurs.pop();
+                    joueurs[i] = listeJoueurs.find(id)->second;
+                    playerCount++;
+                    std::cout<<"Nouveau joueur actif : "<<id<<std::endl;
+                }
+            }
+        }
+        pthread_mutex_unlock(&nouveauJoueurs_lock);
         
     }while (empty != 0);
+
     
     
-  return EXIT_SUCCESS;
+    return EXIT_SUCCESS;
   
 }
 ////////////////////////////////////////// THREAD FUNCTIONS //////////////////////////////////////////////////
@@ -378,6 +401,7 @@ void* accueil(void* arg){
         j->thread = pthread_t();
         tidCount++;
         j->tid = tidCount;
+        listeJoueurs.insert(std::pair<int, Joueur*>(j->tid, j));
         nouveauxJoueurs.push(tidCount);
         std::cout<<"Player added with id : "<<j->tid<<std::endl;
         pthread_mutex_unlock(&nouveauJoueurs_lock);
@@ -405,17 +429,17 @@ void* jouer(void* arg){
     
      //lecture dans la file 1
    pthread_mutex_lock(&file1_lock);
-   std::cout <<"mutex bloque"<<std::endl;
+//    std::cout <<"mutex bloque"<<std::endl;
     
     while(file1.size()==0){
-      std::cout<<"test dans ta maman "<<file1.size()<<std::endl;
+//       std::cout<<"test dans ta maman "<<file1.size()<<std::endl;
       pthread_cond_wait(&nonEmpty,&file1_lock);
     }
    // 
     currentMessage=file1.front();
     std::pair<int,int> currentPair(currentMessage->ligne,currentMessage->colonne);
     
-    std::cout<<"je suis "<< currentPair.first<<" "<<currentPair.second<<std::endl;
+//     std::cout<<"je suis "<< currentPair.first<<" "<<currentPair.second<<std::endl;
     file1.pop();
     
     
@@ -426,7 +450,7 @@ void* jouer(void* arg){
     
     pthread_mutex_unlock(&file1_lock);
     
-    std::cout<<"le mutex a ete debloque"<<std::endl;
+//     std::cout<<"le mutex a ete debloque"<<std::endl;
     
     
     
