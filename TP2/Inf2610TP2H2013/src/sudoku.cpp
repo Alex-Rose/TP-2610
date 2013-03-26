@@ -460,6 +460,9 @@ int main (int argc, char **argv)
     pthread_cancel(accueil_t);
     pthread_cancel(alarm_t);
     
+    writeResults();
+    dispose();
+    
     return EXIT_SUCCESS;
   
 }
