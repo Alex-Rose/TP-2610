@@ -323,6 +323,7 @@ int main (int argc, char **argv)
         
         if (pthread_mutex_trylock(&file1_lock) == 0)   
         {
+	  std::cout<<"je prend le mutex pour le broadcast"<<std::endl;
             if (file1.size() < 4)
             {
                 MessageCJ* msg = new MessageCJ();
@@ -355,8 +356,9 @@ int main (int argc, char **argv)
         
                     msg->choiceList = opts;
                     file1.push(msg);
-//                     pthread_cond_broadcast(&nonEmpty);
-                    sem_post(&file1_sem);
+                     pthread_cond_broadcast(&nonEmpty);
+		      std::cout<<"je broadcast "<<file1.size()<<std::endl;
+                   // sem_post(&file1_sem);
                 }
                 
                 delete empty;
@@ -365,6 +367,7 @@ int main (int argc, char **argv)
             }
             
             pthread_mutex_unlock( &file1_lock );
+	    std::cout<<"je rend le mutex pour le broadcast "<<file2.size()<<std::endl;
         }
 
         
@@ -372,7 +375,7 @@ int main (int argc, char **argv)
         //BOUCLE POUR LIRE LA FILE 2 
         
         if(pthread_mutex_trylock(&file2_lock) == 0)
-        {
+        { 
             if (file2.size() > 0)
             {
                 _MessageJC* msg = new _MessageJC((*file2.front()));
@@ -399,10 +402,12 @@ int main (int argc, char **argv)
                     
                 }
                 pthread_mutex_unlock(&file2_lock);
+		
             }
             else
             {
                 pthread_mutex_unlock(&file2_lock);
+		
                 sleep(1);
             }   
         }
@@ -503,17 +508,18 @@ void* jouer(void* arg){
     
     
      //lecture dans la file 1
-//    pthread_mutex_lock(&file1_lock);
-//    
-//     
-//     while(file1.size()==0){
-//       
-//       pthread_cond_wait(&nonEmpty,&file1_lock);
-//       
-//     }
-    
-    sem_wait(&file1_sem);
     pthread_mutex_lock(&file1_lock);
+    std::cout<<"je prend le lock"<<*(int*)arg<<std::endl;
+//     
+     while(file1.size()==0){
+      std::cout<<"je vais me bloquer et rendre le mutex "<<*(int*)arg<<std::endl;
+      pthread_cond_wait(&nonEmpty,&file1_lock);
+      std::cout<<"je me suis debloque grace au signal"<<*(int*)arg<<"      "<<file1.size()<<std::endl;
+//       
+    }
+    
+    //sem_wait(&file1_sem);
+    //pthread_mutex_lock(&file1_lock);
    // prend le message et verifie si les valeurs sont deja tester
    
     currentMessage=file1.front();
@@ -582,7 +588,7 @@ void* jouer(void* arg){
      
     
    // file1.pop();
-    
+    std::cout<<"je rend le lock "<<*(int*)arg<<std::endl;
     pthread_mutex_unlock(&file1_lock);
     
     
@@ -592,9 +598,9 @@ void* jouer(void* arg){
     
 //     ecriture du resultat sur la file 2
 pthread_mutex_lock(&file2_lock);
+std::cout<<"je prend le lock de la file2"<<*(int*)arg<<std::endl;
     
-    while(file2.size()>3)
-   pthread_cond_wait(&nonFullFile2, &file2_lock);
+    
     
     MessageJC* messageRetour= new MessageJC();
     messageRetour->ligne=currentPair.first;
@@ -602,7 +608,7 @@ pthread_mutex_lock(&file2_lock);
     messageRetour->tid=*(int*)arg;
     messageRetour->choice=numberChoice;
     file2.push(messageRetour);
-    
+    std::cout<<"je rend le lock de la file2"<<*(int*)arg<<std::endl;
     pthread_mutex_unlock(&file2_lock);
     
     
