@@ -121,42 +121,47 @@ int* findEmpty(int (&grid)[9][9])
 
 int* findEmpty(int (&grid)[9][9], int x, int y)
 {
-    int* cell = 0;
-    
-    for (int i = x; i < 9; i++)
-    {
-        for (int j = y + 1; j < 9; j++)
-        {
-            if (grid[j][i] != 0)
-                continue;
-            cell = new int[2];
-            cell[0] = j;
-            cell[1] = i;
-            return cell;
-        }   
-    }
-    
-    for (int i = 0; i <= x; i++)
-    {
-        for (int j = 0; j < 9; j++)
-        {
-            if (i == x && j == y) //Condifitons initiales => boucle finie
-                return cell;
-            
-            if (grid[j][i] != 0)
-                continue;
-            cell = new int[2];
-            cell[0] = j;
-            cell[1] = i;
-            return cell;
-        }   
-    }
-    
-    return cell;
+//     int* cell = 0;
+//     
+//     for (int i = x + 1; i < 9; i++)
+//     {
+//         for (int j = y; j < 9; j++)
+//         {
+//             if (grid[j][i] != 0)
+//                 continue;
+//             cell = new int[2];
+//             cell[0] = j;
+//             cell[1] = i;
+//             return cell;
+//         }   
+//     }
+//     
+//     for (int i = 0; i <= x; i++)
+//     {
+//         for (int j = 0; j < 9; j++)
+//         {
+//             if (i == x && j == y) //Condifitons initiales => boucle finie
+//                 return cell;
+//             
+//             if (grid[j][i] != 0)
+//                 continue;
+//             cell = new int[2];
+//             cell[0] = j;
+//             cell[1] = i;
+//             return cell;
+//         }   
+//     }
+//     
+//     return cell;
+    return findEmpty(grid);
 }
 
 std::list<int> getOptions (int (&grid)[9][9], int x, int y)
 {
+//     if (grid[x][y] != 0)
+//         std::cout<<"On est dans la colle"<<std::endl;
+    
+//     std::cout<<"LUKE, JE SUIS TON ["<<x<<","<<y<<"]"<<std::endl;
     std::list<int> opt;
     
     bool set[9];
@@ -176,27 +181,32 @@ std::list<int> getOptions (int (&grid)[9][9], int x, int y)
             set[grid[i][y] - 1] = false;
     }
     
-    for(int i = (x / 3) * 3 ; i < (x / 3) * 3 + 3; i++)
+    for(int i = (y / 3) * 3 ; i < (y / 3) * 3 + 3; i++)
     {
         for(int j = (x / 3) * 3 ; j < (x / 3) * 3 + 3; j++)
         {
-            if (grid[i][j] != 0)
-                set[grid[i][j] - 1] = false;
+            if (grid[j][i] != 0)
+                set[grid[j][i] - 1] = false;
         }
     }
     
+//     std::cout<<"CHOOSE YOUR SIDE LUKE :";
     for(int i = 0; i < 9; i++)
     {
         if(set[i])
+        {
             opt.push_back(i + 1);
+//             std::cout<<i+1;
+        }
     }
+//     std::cout<<std::endl;
     
     return opt;
 }
 
 void eliminateLooser(std::map<int, Joueur*>* listeJoueurs, int tid, Joueur** joueursActifs)
 {
-    pthread_cancel((*listeJoueurs->find(tid)->second->thread));
+    //pthread_cancel((*listeJoueurs->find(tid)->second->thread));
     pthread_mutex_lock(&nouveauJoueurs_lock);
     for(int i = 0; i < 5; i++)
     {
@@ -323,7 +333,7 @@ int main (int argc, char **argv)
     sem_init(&file1_sem, 0, 0);
     
     int* empty = findEmpty(grille);
-    
+    int col = 0, ln = 0;
     do
     {
         //============================================================
@@ -334,7 +344,7 @@ int main (int argc, char **argv)
         
         if (pthread_mutex_trylock(&file1_lock) == 0)   
         {
-	  std::cout<<"je prend le mutex pour le broadcast"<<std::endl;
+// 	  std::cout<<"je prend le mutex pour le broadcast"<<std::endl;
             if (file1.size() < 4)
             {
                 MessageCJ* msg = new MessageCJ();
@@ -368,17 +378,19 @@ int main (int argc, char **argv)
                     msg->choiceList = opts;
                     file1.push(msg);
                      pthread_cond_broadcast(&nonEmpty);
-		      std::cout<<"je broadcast "<<file1.size()<<std::endl;
+// 		      std::cout<<"je broadcast "<<file1.size()<<std::endl;
                    // sem_post(&file1_sem);
                 }
                 
                 delete empty;
-                empty = findEmpty(grille, msg->colonne, msg->ligne);
+                
+                col = msg->colonne;
+                ln = msg->ligne;
     
             }
             
             pthread_mutex_unlock( &file1_lock );
-	    std::cout<<"je rend le mutex pour le broadcast "<<file2.size()<<std::endl;
+// 	    std::cout<<"je rend le mutex pour le broadcast "<<file2.size()<<std::endl;
         }
 
         
@@ -391,27 +403,35 @@ int main (int argc, char **argv)
             {
                 _MessageJC* msg = new _MessageJC((*file2.front()));
                 file2.pop();
-                //pthread_cond_broadcast(&nonFullFile2);
-                if (solution[msg->colonne][msg->ligne] == msg->choice)
+                if (listeJoueurs.find(msg->tid)->second->etat != "Elimine")
                 {
-                    //If win!
-                    grille[msg->colonne][msg->ligne] = msg->choice;
-                    Joueur* vainqueur = listeJoueurs.find(msg->tid)->second;
-                    vainqueur->score++;
-                }
-                else
-                {
-                    //if noob!
-                    Joueur* looser = listeJoueurs.find(msg->tid)->second;
-                    looser->score--;
-                    looser->nbErreur++;
-                    if (looser->score <= -10)
-                    {    
-			  eliminateLooser(&listeJoueurs, msg->tid, joueurs);
-			  std::cout<<"Better luck next time, NOOB! "<<msg->tid<<std::endl;
-			  
-                    }
+//                     std::cout<<"ANS = "<<msg->choice<<" ? "<<solution[msg->colonne][msg->ligne]<<std::endl;
+//                     if (msg->choice == 0)
+//                         std::cout<<"LE CIEL NOUS TOMBE SUR LA TETE PAR TOUTATIS!!!"<<std::endl;
                     
+                    //pthread_cond_broadcast(&nonFullFile2);
+                    if (solution[msg->colonne][msg->ligne] == msg->choice)
+                    {
+                        //If win!
+                        grille[msg->colonne][msg->ligne] = msg->choice;
+                        Joueur* vainqueur = listeJoueurs.find(msg->tid)->second;
+                        vainqueur->score++;
+                    }
+                    else
+                    {
+                        //if noob!
+                        Joueur* looser = listeJoueurs.find(msg->tid)->second;
+                        looser->score--;
+                        looser->nbErreur++;
+                        if (looser->score <= -10)
+                        {    
+			  
+                eliminateLooser(&listeJoueurs, msg->tid, joueurs);
+                std::cout<<"Better luck next time, NOOB! "<<msg->tid<<std::endl;
+                
+                        }
+                        
+                    }
                 }
                 pthread_mutex_unlock(&file2_lock);
 		
@@ -447,6 +467,7 @@ int main (int argc, char **argv)
                             nouveauxJoueurs.pop();
                             joueurs[i] = listeJoueurs.find(id)->second;
                             playerCount++;
+                            joueurs[i]->etat = "Inconnu";
                             pthread_create(joueurs[i]->thread, NULL, jouer, &joueurs[i]->tid);
                         }
                     }
@@ -455,7 +476,35 @@ int main (int argc, char **argv)
         }
         pthread_mutex_unlock(&nouveauJoueurs_lock);
         
+        empty = findEmpty(grille, col, ln);
+        //printGrid(grille);
+//         std::cout<<std::endl;
     }while (empty != 0 && nbJoueurActifs() > 0);
+    
+    // Si on se rend ici, soit tous les joueurs sont morts, soit on a fini la grille
+    int max = 0;
+    for (std::map<int, Joueur*>::iterator it = listeJoueurs.begin(); it != listeJoueurs.end(); it++)
+    {
+        
+        if (it->second->etat == "Inconnu")
+        {
+            if (it->second->score > max)
+                max = it->second->score;
+        }
+    }
+    
+    for (std::map<int, Joueur*>::iterator it = listeJoueurs.begin(); it != listeJoueurs.end(); it++)
+    {
+        
+        if (it->second->etat == "Inconnu")
+        {
+            if (it->second->score == max)
+                it->second->etat = "Vainqueur";
+            else
+                it->second->etat = "Perdant";
+        }
+    }
+    
     
     pthread_cancel(accueil_t);
     pthread_cancel(alarm_t);
@@ -495,7 +544,7 @@ void* accueil(void* arg){
         j->tid = tidCount;
         listeJoueurs.insert(std::pair<int, Joueur*>(j->tid, j));
         nouveauxJoueurs.push(j->tid);
-        std::cout<<"Player added with id : "<<j->tid<<std::endl;
+//         std::cout<<"Player added with id : "<<j->tid<<std::endl;
         pthread_mutex_unlock(&nouveauJoueurs_lock);
     }
     
@@ -547,7 +596,7 @@ void* jouer(void* arg){
     currentMessage=file1.front();
     std::pair<int,int> currentPair(currentMessage->ligne,currentMessage->colonne);
     
-    std::cout<<"je suis "<< currentPair.first<<" "<<currentPair.second<< "  et je suis le thread numero "<<*(int*)arg<<std::endl;
+ //   std::cout<<"je suis "<< currentPair.first<<" "<<currentPair.second<< "  et je suis le thread numero "<<*(int*)arg<<std::endl;
     
     for(std::list<int>::iterator it = alreadyTry[currentPair].begin();it!=alreadyTry[currentPair].end();it++)
       
@@ -577,7 +626,7 @@ void* jouer(void* arg){
     for(std::list<int>::iterator it1 = currentMessage->choiceList.begin(); it1!=currentMessage->choiceList.end();it1++)
     {
       
-      std::cout<<(*it1)<<"  ";
+      //std::cout<<(*it1)<<"  ";
       
       
     }
@@ -586,23 +635,23 @@ void* jouer(void* arg){
     }
     else 
     {
-      std::cout<<"je suis vide"<<std::endl;
+     // std::cout<<"je suis vide"<<std::endl;
       numberChoice=0;
       
       
       
     }
     
-    std::cout<<std::endl;
+//     std::cout<<std::endl;
     for(std::list<int>::iterator it1 = alreadyTry[currentPair].begin(); it1!=alreadyTry[currentPair].end();it1++)
     {
       
-     std::cout<<(*it1)<<"  ";
+   //   std::cout<<(*it1)<<"  ";
       
       
     }
-    std::cout<<std::endl;
-    std::cout<<std::endl;
+   // std::cout<<std::endl;
+   // std::cout<<std::endl;
     file1.pop();
     
     
@@ -610,9 +659,10 @@ void* jouer(void* arg){
      
     
    // file1.pop();
-    std::cout<<"je rend le lock "<<*(int*)arg<<std::endl;
+//     std::cout<<"je rend le lock "<<*(int*)arg<<std::endl;
     pthread_mutex_unlock(&file1_lock);
     
+     sleep(2);
     
     
     
@@ -620,7 +670,7 @@ void* jouer(void* arg){
     
 //     ecriture du resultat sur la file 2
     pthread_mutex_lock(&file2_lock);
-    std::cout<<"je prend le lock de la file2"<<*(int*)arg<<std::endl;
+//     std::cout<<"je prend le lock de la file2"<<*(int*)arg<<std::endl;
     
     
   
@@ -630,7 +680,7 @@ void* jouer(void* arg){
     messageRetour->tid=*(int*)arg;
     messageRetour->choice=numberChoice;
     file2.push(messageRetour);
-    std::cout<<"je rend le lock de la file2"<<*(int*)arg<<std::endl;
+//     std::cout<<"je rend le lock de la file2"<<*(int*)arg<<std::endl;
     pthread_mutex_unlock(&file2_lock);
     
     
