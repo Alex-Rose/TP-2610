@@ -354,15 +354,14 @@ int main (int argc, char **argv)
                     file1.push(msg);
                     pthread_cond_broadcast(&nonEmpty);
                     
-		
                 }
-            
-                pthread_mutex_unlock( &file1_lock );
                 
                 delete empty;
                 empty = findEmpty(grille, msg->colonne, msg->ligne);
     
             }
+            
+            pthread_mutex_unlock( &file1_lock );
         }
 
         
