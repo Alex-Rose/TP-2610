@@ -581,7 +581,7 @@ void* jouer(void* arg){
     
     
     
-    
+    sleep(2);
     
     //ecriture du resultat sur la file 2
 //pthread_mutex_lock(&file2_lock);
