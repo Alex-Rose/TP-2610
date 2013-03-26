@@ -531,12 +531,12 @@ void* jouer(void* arg){
     
      //lecture dans la file 1
     pthread_mutex_lock(&file1_lock);
-    std::cout<<"je prend le lock"<<*(int*)arg<<std::endl;
+    
 //     
      while(file1.size()==0){
-      std::cout<<"je vais me bloquer et rendre le mutex "<<*(int*)arg<<std::endl;
+      
       pthread_cond_wait(&nonEmpty,&file1_lock);
-      std::cout<<"je me suis debloque grace au signal"<<*(int*)arg<<"      "<<file1.size()<<std::endl;
+      
 //       
     }
     
@@ -547,7 +547,7 @@ void* jouer(void* arg){
     currentMessage=file1.front();
     std::pair<int,int> currentPair(currentMessage->ligne,currentMessage->colonne);
     
- //   std::cout<<"je suis "<< currentPair.first<<" "<<currentPair.second<< "  et je suis le thread numero "<<*(int*)arg<<std::endl;
+    std::cout<<"je suis "<< currentPair.first<<" "<<currentPair.second<< "  et je suis le thread numero "<<*(int*)arg<<std::endl;
     
     for(std::list<int>::iterator it = alreadyTry[currentPair].begin();it!=alreadyTry[currentPair].end();it++)
       
@@ -577,7 +577,7 @@ void* jouer(void* arg){
     for(std::list<int>::iterator it1 = currentMessage->choiceList.begin(); it1!=currentMessage->choiceList.end();it1++)
     {
       
-      //std::cout<<(*it1)<<"  ";
+      std::cout<<(*it1)<<"  ";
       
       
     }
@@ -586,7 +586,7 @@ void* jouer(void* arg){
     }
     else 
     {
-     // std::cout<<"je suis vide"<<std::endl;
+      std::cout<<"je suis vide"<<std::endl;
       numberChoice=0;
       
       
@@ -597,12 +597,12 @@ void* jouer(void* arg){
     for(std::list<int>::iterator it1 = alreadyTry[currentPair].begin(); it1!=alreadyTry[currentPair].end();it1++)
     {
       
-   //   std::cout<<(*it1)<<"  ";
+     std::cout<<(*it1)<<"  ";
       
       
     }
-   // std::cout<<std::endl;
-   // std::cout<<std::endl;
+    std::cout<<std::endl;
+    std::cout<<std::endl;
     file1.pop();
     
     
