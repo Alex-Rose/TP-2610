@@ -406,10 +406,10 @@ int main (int argc, char **argv)
                     looser->score--;
                     looser->nbErreur++;
                     if (looser->score <= -10)
-                    {    pthread_mutex_lock(&file1_lock);
+                    {    
 			  eliminateLooser(&listeJoueurs, msg->tid, joueurs);
 			  std::cout<<"Better luck next time, NOOB! "<<msg->tid<<std::endl;
-			  pthread_mutex_unlock(&file1_lock);
+			  
                     }
                     
                 }
@@ -504,10 +504,17 @@ void* accueil(void* arg){
 
 }
 /**************************************** thread_Joueur*****************************************************/
+
+static void cleanup_handler(void* arg)
+{
+    pthread_mutex_unlock(&file1_lock);
+    pthread_mutex_unlock(&file2_lock);
+}
+
 //Function execute par le thread_Joueur
 void* jouer(void* arg){
   
- 
+    pthread_cleanup_push(cleanup_handler, NULL);
   MessageCJ* currentMessage;
   std::map<std::pair<int,int>,std::list<int> > alreadyTry;
   std::list<int>::iterator findIter;
@@ -630,7 +637,7 @@ void* jouer(void* arg){
   }
   
   
-
+pthread_cleanup_pop(0);
 }
 
 
