@@ -50,11 +50,11 @@ typedef struct _Joueur {
     int score;
     int nbErreur;
     std::string etat;
-    pthread_t thread;
+    pthread_t* thread;
     _Joueur(){
         etat = "Attente";
         tid= -1;
-        score=nbErreur=thread = 0;
+        score=nbErreur= 0;
     }
 } Joueur;
 #endif /* fin entete_H*/

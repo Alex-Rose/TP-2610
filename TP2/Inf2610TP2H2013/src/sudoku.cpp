@@ -47,7 +47,7 @@ std::queue<int> nouveauxJoueurs;
 pthread_mutex_t file1_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t file2_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t nouveauJoueurs_lock = PTHREAD_MUTEX_INITIALIZER;
-
+sem_t file1_sem;
 
 //condition pour la lecture
 pthread_cond_t nonEmpty = PTHREAD_COND_INITIALIZER;
@@ -196,7 +196,7 @@ std::list<int> getOptions (int (&grid)[9][9], int x, int y)
 
 void eliminateLooser(std::map<int, Joueur*>* listeJoueurs, int tid, Joueur** joueursActifs)
 {
-    pthread_cancel(listeJoueurs->find(tid)->second->thread);
+    pthread_cancel((*listeJoueurs->find(tid)->second->thread));
     pthread_mutex_lock(&nouveauJoueurs_lock);
     for(int i = 0; i < 5; i++)
     {
@@ -237,7 +237,7 @@ void dispose()
     
     for (std::map<int, Joueur*>::iterator it = listeJoueurs.begin(); it != listeJoueurs.end(); it++)
     {
-        pthread_cancel(it->second->thread);
+        pthread_cancel((*it->second->thread));
         Joueur* j = it->second;
         //delete j;
     }
@@ -279,26 +279,27 @@ int main (int argc, char **argv)
     joueurs[1] = new Joueur();
     joueurs[2] = new Joueur();
     
-    joueurs[0]->thread = pthread_t();
-    joueurs[1]->thread = pthread_t();
-    joueurs[2]->thread = pthread_t();
-    
-    joueurs[0]->etat = "Inconnu";
-    joueurs[1]->etat = "Inconnu";
-    joueurs[2]->etat = "Inconnu";
-    
-    pthread_create(&joueurs[0]->thread, NULL, jouer, (void*)1);
-    pthread_create(&joueurs[1]->thread, NULL, jouer, (void*)2);
-    pthread_create(&joueurs[2]->thread, NULL, jouer, (void*)3);
+    joueurs[0]->thread = new pthread_t();
+    joueurs[1]->thread = new pthread_t();
+    joueurs[2]->thread = new pthread_t();
+    int un=1;
+    int deux=2;
+    int trois=3;
+    pthread_create(joueurs[0]->thread, NULL, jouer, &un);
+    pthread_create(joueurs[1]->thread, NULL, jouer, &deux);
+    pthread_create(joueurs[2]->thread, NULL, jouer, &trois);
     
     joueurs[0]->tid = 1;
     joueurs[1]->tid = 2;
     joueurs[2]->tid = 3;
     
+    joueurs[0]->etat = "Inconnu";
+    joueurs[1]->etat = "Inconnu";
+    joueurs[2]->etat = "Inconnu";
     
     listeJoueurs.insert(std::pair<int, Joueur*>(joueurs[0]->tid, joueurs[0]));
-    listeJoueurs.insert(std::pair<int, Joueur*>(joueurs[1]->tid, joueurs[0]));
-    listeJoueurs.insert(std::pair<int, Joueur*>(joueurs[2]->tid, joueurs[0]));
+    listeJoueurs.insert(std::pair<int, Joueur*>(joueurs[1]->tid, joueurs[1]));
+    listeJoueurs.insert(std::pair<int, Joueur*>(joueurs[2]->tid, joueurs[2]));
     
     
     // Creation des deux autres thread
@@ -307,6 +308,8 @@ int main (int argc, char **argv)
     
     pthread_create(&accueil_t, NULL, accueil, (void*)pathArrivee.c_str());
     pthread_create(&alarm_t, NULL, minuterie, (void*)&tempsMax);
+    
+    sem_init(&file1_sem, 0, 0);
     
     int* empty = findEmpty(grille);
     
@@ -318,7 +321,7 @@ int main (int argc, char **argv)
             break;
         
         
-        if (pthread_mutex_trylock(&file1_lock) == 0)
+        if (pthread_mutex_trylock(&file1_lock) == 0)   
         {
             if (file1.size() < 4)
             {
@@ -352,8 +355,8 @@ int main (int argc, char **argv)
         
                     msg->choiceList = opts;
                     file1.push(msg);
-                    pthread_cond_broadcast(&nonEmpty);
-                    
+//                     pthread_cond_broadcast(&nonEmpty);
+                    sem_post(&file1_sem);
                 }
                 
                 delete empty;
@@ -374,7 +377,7 @@ int main (int argc, char **argv)
             {
                 _MessageJC* msg = new _MessageJC((*file2.front()));
                 file2.pop();
-                
+                //pthread_cond_broadcast(&nonFullFile2);
                 if (solution[msg->colonne][msg->ligne] == msg->choice)
                 {
                     //If win!
@@ -389,8 +392,10 @@ int main (int argc, char **argv)
                     looser->score--;
                     looser->nbErreur++;
                     if (looser->score <= -10)
+                    {    
                         eliminateLooser(&listeJoueurs, msg->tid, joueurs);
-                    std::cout<<"Better luck next time, NOOB!"<<std::endl;
+                    std::cout<<"Better luck next time, NOOB! "<<msg->tid<<std::endl;
+                    }
                     
                 }
                 pthread_mutex_unlock(&file2_lock);
@@ -425,7 +430,7 @@ int main (int argc, char **argv)
                             nouveauxJoueurs.pop();
                             joueurs[i] = listeJoueurs.find(id)->second;
                             playerCount++;
-                            pthread_create(&joueurs[i]->thread, NULL, jouer, (void*)joueurs[i]->tid);
+                            pthread_create(joueurs[i]->thread, NULL, jouer, &joueurs[i]->tid);
                         }
                     }
                 }
@@ -465,7 +470,7 @@ void* accueil(void* arg){
         
         pthread_mutex_lock(&nouveauJoueurs_lock);
         Joueur* j = new Joueur();
-        j->thread = pthread_t();
+        j->thread = new pthread_t();
         tidCount++;
         j->tid = tidCount;
         listeJoueurs.insert(std::pair<int, Joueur*>(j->tid, j));
@@ -490,29 +495,31 @@ void* jouer(void* arg){
   std::map<std::pair<int,int>,std::list<int> > alreadyTry;
   std::list<int>::iterator findIter;
   int randomNumber;
-  
+  int numberChoice;
+  int indice=0;
   srand(time(NULL));
-  
   
   while(1){
     
     
      //lecture dans la file 1
-   pthread_mutex_lock(&file1_lock);
-   
+//    pthread_mutex_lock(&file1_lock);
+//    
+//     
+//     while(file1.size()==0){
+//       
+//       pthread_cond_wait(&nonEmpty,&file1_lock);
+//       
+//     }
     
-    while(file1.size()==0){
-      
-      pthread_cond_wait(&nonEmpty,&file1_lock);
-      
-    }
-    
+    sem_wait(&file1_sem);
+    pthread_mutex_lock(&file1_lock);
    // prend le message et verifie si les valeurs sont deja tester
    
     currentMessage=file1.front();
     std::pair<int,int> currentPair(currentMessage->ligne,currentMessage->colonne);
     
-    std::cout<<"je suis "<< currentPair.first<<" "<<currentPair.second<< "  et je suis le thread numero mother fucker"<<std::endl;
+    std::cout<<"je suis "<< currentPair.first<<" "<<currentPair.second<< "  et je suis le thread numero "<<*(int*)arg<<std::endl;
     
     for(std::list<int>::iterator it = alreadyTry[currentPair].begin();it!=alreadyTry[currentPair].end();it++)
       
@@ -537,6 +544,7 @@ void* jouer(void* arg){
     std::advance(ite,randomNumber);
     
     alreadyTry[currentPair].push_back(*ite);
+    numberChoice=*ite;
     
     for(std::list<int>::iterator it1 = currentMessage->choiceList.begin(); it1!=currentMessage->choiceList.end();it1++)
     {
@@ -573,7 +581,7 @@ void* jouer(void* arg){
      
     
    // file1.pop();
-    delete currentMessage;
+    
     pthread_mutex_unlock(&file1_lock);
     
     
@@ -581,19 +589,24 @@ void* jouer(void* arg){
     
     
     
-    //ecriture du resultat sur la file 2
-// pthread_mutex_lock(&file2_lock);
+//     ecriture du resultat sur la file 2
+pthread_mutex_lock(&file2_lock);
     
-    //while(file2.size()>5)
-     // pthread_cond_wait(&nonFullFile2, &file2_lock);
+    while(file2.size()>3)
+   pthread_cond_wait(&nonFullFile2, &file2_lock);
+    
+    MessageJC* messageRetour= new MessageJC();
+    messageRetour->ligne=currentPair.first;
+    messageRetour->colonne=currentPair.second;
+    messageRetour->tid=*(int*)arg;
+    messageRetour->choice=numberChoice;
+    file2.push(messageRetour);
+    pthread_mutex_unlock(&file2_lock);
     
     
-    //pthread_mutex_unlock(&file2_lock);
     
-    
-    
-    
-    
+  std::cout<<indice<<std::endl;
+    indice++;
     
   }
   
