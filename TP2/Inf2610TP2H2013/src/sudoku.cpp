@@ -23,7 +23,7 @@
 #include <utility>
 #include <map>
 #include <algorithm>
-
+#include <signal.h>
 
 
 ////////////////////////////////////////// DEFINES //////////////////////////////////////////////////
@@ -33,6 +33,8 @@
 void* jouer(void* arg);
 void* accueil(void* arg);
 void* minuterie (void* arg);
+void writeResults();
+void dispose();
 
 ///////////////////////////////////// GLOBAL VARIABLES //////////////////////////////////////////////
 std::queue<_MessageCJ*> file1;
@@ -53,11 +55,18 @@ Joueur* joueurs[5];
 std::map<int, Joueur*> listeJoueurs;
 int tidCount = 3;
 int playerCount = 3;
+std::string pathResultat;
+bool timeUp = false;
+bool noOneLeft = false;
+
+pthread_t mainThread;
 
 //Gestionnaire de signal
 void sigHandler(int arg)
 {
-
+    writeResults();
+    dispose();
+    exit(EXIT_SUCCESS);
 }
 
 /**************************************** MAIN *****************************************************/
@@ -190,11 +199,45 @@ void eliminateLooser(std::map<int, Joueur*>* listeJoueurs, int tid, Joueur** jou
     {
         if (joueursActifs[i] != 0 && joueursActifs[i]->tid == tid)
         {
+            joueursActifs[i]->etat = "Elimine";
             joueursActifs[i] = 0;
             playerCount--;
         }
     }
     pthread_mutex_unlock(&nouveauJoueurs_lock);
+}
+
+void writeResults()
+{
+    std::ofstream file;
+    file.open(pathResultat.c_str());
+    
+    if (timeUp)
+        file<<"Partie annulee!"<<std::endl;
+    else if (noOneLeft)
+        file<<"Partie non terminee!"<<std::endl;
+    else 
+        file<<"Partie terminee!"<<std::endl;
+    for (std::map<int, Joueur*>::iterator it = listeJoueurs.begin(); it != listeJoueurs.end(); it++)
+    {
+        file<<"Joueur "<<it->second->tid<<std::endl;
+        file<<"Score :  "<<it->second->score<<std::endl;
+        file<<"Nb Erreur :  "<<it->second->nbErreur<<std::endl;
+        file<<"Etat final : "<<it->second->etat<<std::endl<<std::endl;
+    }
+}
+
+void dispose()
+{
+    for (int i = 0; i < 5; i++)
+        joueurs[i] = 0;
+    
+    for (std::map<int, Joueur*>::iterator it = listeJoueurs.begin(); it != listeJoueurs.end(); it++)
+    {
+        pthread_cancel(it->second->thread);
+        Joueur* j = it->second;
+        //delete j;
+    }
 }
 
 //Execute par le thread principal (controleur)
@@ -203,14 +246,18 @@ int main (int argc, char **argv)
     if (argc != 6)
         return EXIT_FAILIURE;
 	
+    signal(SIGALRM, sigHandler);
+    
 	std::string pathGrilleVide = argv[1];
 	std::string pathGrilleSolution = argv[2];
 	std::string pathArrivee = argv[3];
-	std::string tempsMax = argv[4];
-	std::string pathResultat = argv[5];
+	int tempsMax = atoi(argv[4]);
+	pathResultat = argv[5];
     
     int grille[9][9];
     int solution[9][9];
+    
+    mainThread = pthread_self();
     
     loadGrid(pathGrilleVide, grille);
 //     printGrid(grille);
@@ -233,6 +280,10 @@ int main (int argc, char **argv)
     joueurs[1]->thread = pthread_t();
     joueurs[2]->thread = pthread_t();
     
+    joueurs[0]->etat = "Inconnu";
+    joueurs[1]->etat = "Inconnu";
+    joueurs[2]->etat = "Inconnu";
+    
     pthread_create(&joueurs[0]->thread, NULL, jouer, (void*)1);
     pthread_create(&joueurs[1]->thread, NULL, jouer, (void*)2);
     pthread_create(&joueurs[2]->thread, NULL, jouer, (void*)3);
@@ -252,7 +303,7 @@ int main (int argc, char **argv)
     pthread_t alarm_t;
     
     pthread_create(&accueil_t, NULL, accueil, (void*)pathArrivee.c_str());
-    pthread_create(&alarm_t, NULL, minuterie, NULL);
+    pthread_create(&alarm_t, NULL, minuterie, (void*)&tempsMax);
     
     int* empty = findEmpty(grille);
     
@@ -331,6 +382,7 @@ int main (int argc, char **argv)
                     //if noob!
                     Joueur* looser = listeJoueurs.find(msg->tid)->second;
                     looser->score--;
+                    looser->nbErreur++;
                     if (looser->score <= -10)
                         eliminateLooser(&listeJoueurs, msg->tid, joueurs);
                     std::cout<<"Better luck next time, NOOB!"<<std::endl;
@@ -389,10 +441,10 @@ int main (int argc, char **argv)
 /**************************************** thread_Alarm*****************************************************/
 //Function execute par le thread_Alarm
 void* minuterie (void* arg){
-//Dormir pendant la dur�ee maximale requise
 
-//Envoyer un sIGALRM au thread principal
+    sleep((*(int*)arg));
 
+    pthread_kill(mainThread, SIGALRM);
 }
 /**************************************** thread_Accueil*****************************************************/
 //Function execute par le thread_Accueil

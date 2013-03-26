@@ -12,6 +12,7 @@
 #include <list>
 #include <utility>
 #include <pthread.h>
+#include <string>
 
 /****************************************************************************************************
  * 
@@ -47,10 +48,13 @@ typedef struct _MessageJC {
 typedef struct _Joueur {
     int tid;
     int score;
+    int nbErreur;
+    std::string etat;
     pthread_t thread;
     _Joueur(){
+        etat = "Attente";
         tid= -1;
-        score=thread = 0;
+        score=nbErreur=thread = 0;
     }
 } Joueur;
 #endif /* fin entete_H*/
