@@ -233,10 +233,12 @@ int main (int argc, char **argv)
     joueurs[0]->thread = pthread_t();
     joueurs[1]->thread = pthread_t();
     joueurs[2]->thread = pthread_t();
-    
-    pthread_create(&joueurs[0]->thread, NULL, jouer, (void*)1);
-    pthread_create(&joueurs[1]->thread, NULL, jouer, (void*)2);
-    pthread_create(&joueurs[2]->thread, NULL, jouer, (void*)3);
+    int un=1;
+    int deux=2;
+    int trois=3;
+    pthread_create(&joueurs[0]->thread, NULL, jouer, &un);
+    pthread_create(&joueurs[1]->thread, NULL, jouer, &deux);
+    pthread_create(&joueurs[2]->thread, NULL, jouer, &trois);
     
     joueurs[0]->tid = 1;
     joueurs[1]->tid = 2;
@@ -327,7 +329,7 @@ int main (int argc, char **argv)
             {
                 _MessageJC* msg = new _MessageJC((*file2.front()));
                 file2.pop();
-                
+                //pthread_cond_broadcast(&nonFullFile2);
                 if (solution[msg->colonne][msg->ligne] == msg->choice)
                 {
                     //If win!
@@ -427,6 +429,7 @@ void* jouer(void* arg){
   std::map<std::pair<int,int>,std::list<int> > alreadyTry;
   std::list<int>::iterator findIter;
   int randomNumber;
+  int numberChoice;
   
   srand(time(NULL));
   
@@ -449,7 +452,7 @@ void* jouer(void* arg){
     currentMessage=file1.front();
     std::pair<int,int> currentPair(currentMessage->ligne,currentMessage->colonne);
     
-    std::cout<<"je suis "<< currentPair.first<<" "<<currentPair.second<< "  et je suis le thread numero mother fucker"<<std::endl;
+    std::cout<<"je suis "<< currentPair.first<<" "<<currentPair.second<< "  et je suis le thread numero mother fucker "<<*(int*)arg<<std::endl;
     
     for(std::list<int>::iterator it = alreadyTry[currentPair].begin();it!=alreadyTry[currentPair].end();it++)
       
@@ -474,6 +477,7 @@ void* jouer(void* arg){
     std::advance(ite,randomNumber);
     
     alreadyTry[currentPair].push_back(*ite);
+    numberChoice=*ite;
     
     for(std::list<int>::iterator it1 = currentMessage->choiceList.begin(); it1!=currentMessage->choiceList.end();it1++)
     {
@@ -510,7 +514,7 @@ void* jouer(void* arg){
      
     
    // file1.pop();
-    delete currentMessage;
+    
     pthread_mutex_unlock(&file1_lock);
     
     
@@ -519,13 +523,18 @@ void* jouer(void* arg){
     
     
     //ecriture du resultat sur la file 2
-// pthread_mutex_lock(&file2_lock);
+      pthread_mutex_lock(&file2_lock);
     
-    //while(file2.size()>5)
-     // pthread_cond_wait(&nonFullFile2, &file2_lock);
+    //while(file2.size()>3)
+   //pthread_cond_wait(&nonFullFile2, &file2_lock);
     
-    
-    //pthread_mutex_unlock(&file2_lock);
+    MessageJC* messageRetour= new MessageJC();
+    messageRetour->ligne=currentPair.first;
+    messageRetour->colonne=currentPair.second;
+    messageRetour->tid=*(int*)arg;
+    messageRetour->choice=numberChoice;
+    file2.push(messageRetour);
+    pthread_mutex_unlock(&file2_lock);
     
     
     
