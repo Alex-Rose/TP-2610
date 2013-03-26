@@ -304,15 +304,10 @@ int main (int argc, char **argv)
                 
                 delete empty;
                 empty = findEmpty(grille, msg->colonne, msg->ligne);
-    //             std::cout<<"Finding more empty cells"<<std::endl;
+    
             }
         }
-        //pthread_mutex_unlock( &file1_lock );
-           // pthread_cond_broadcast(&nonEmpty);
-             
-            
-//             std::cout<<"Queue 1 is full!"<<std::endl;
-        
+
         
         //==========================
         //BOUCLE POUR LIRE LA FILE 2 
@@ -350,26 +345,41 @@ int main (int argc, char **argv)
             }   
         }
             
+        
         pthread_mutex_lock(&nouveauJoueurs_lock);
-        if (playerCount < 5 && nouveauxJoueurs.size() > 0)
+        if (nouveauxJoueurs.size() > 0)
         {
-            for (int i = 0; i < 5; i++)
+            if (nouveauxJoueurs.front() == 0)
+                pthread_cancel(accueil_t);
+            else if (playerCount < 5 )
             {
-                if (joueurs[i] == 0)
+                
+                    
+                for (int i = 0; i < 5 && playerCount < 5 && nouveauxJoueurs.size() > 0; i++)
                 {
-                    int id = nouveauxJoueurs.front();
-                    nouveauxJoueurs.pop();
-                    joueurs[i] = listeJoueurs.find(id)->second;
-                    playerCount++;
-                    std::cout<<"Nouveau joueur actif : "<<id<<std::endl;
+                    if (joueurs[i] == 0)
+                    {
+                     
+                        int id = nouveauxJoueurs.front();
+                        if (id == 0)
+                           pthread_cancel(accueil_t);
+                        else
+                        {
+                            nouveauxJoueurs.pop();
+                            joueurs[i] = listeJoueurs.find(id)->second;
+                            playerCount++;
+                            std::cout<<"Nouveau joueur actif : "<<id<<std::endl;
+                        }
+                    }
                 }
             }
         }
         pthread_mutex_unlock(&nouveauJoueurs_lock);
         
     }while (empty != 0);
-
     
+    pthread_cancel(accueil_t);
+    pthread_cancel(alarm_t);
     
     return EXIT_SUCCESS;
   
@@ -402,7 +412,7 @@ void* accueil(void* arg){
         tidCount++;
         j->tid = tidCount;
         listeJoueurs.insert(std::pair<int, Joueur*>(j->tid, j));
-        nouveauxJoueurs.push(tidCount);
+        nouveauxJoueurs.push(j->tid);
         std::cout<<"Player added with id : "<<j->tid<<std::endl;
         pthread_mutex_unlock(&nouveauJoueurs_lock);
     }
