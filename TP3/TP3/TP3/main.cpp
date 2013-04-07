@@ -39,7 +39,7 @@ int main()
    delete a;
    
    Game* game = new Game();
-   game->init(3, 10);
+   game->init(3, 5);
    game->startGame();
    
       delete game;

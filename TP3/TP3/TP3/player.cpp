@@ -13,6 +13,14 @@ Player::Player()
 {
    thread_ = 0;
    threadId_ = 0;
+   sem_ = 0;
+}
+
+Player::Player(HANDLE mutex)
+{
+   thread_ = 0;
+   threadId_ = 0;
+   sem_ = mutex;
 }
 
 Player::~Player()
@@ -32,6 +40,13 @@ DWORD WINAPI Player::play_wrapper(void* o)
 
 DWORD WINAPI Player::play(LPVOID arg)
 {
-   std::cout<<"Play from thread "<<threadId_<<std::endl;
+   //Faudrait lui mettre une condition pour arreter un jour
+   while(true)
+   {
+      WaitForSingleObject(sem_, INFINITE);
+      std::cout<<"Play from thread "<<threadId_<<std::endl;
+      Sleep(rand() % 2000);
+      ReleaseSemaphore(sem_, 1, NULL);
+   }
    return 0;
 }

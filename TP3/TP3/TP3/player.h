@@ -13,11 +13,14 @@ class Player
 public:
    Player();
 
+   Player(HANDLE mutex_);
+
    ~Player();
 
    void startPlayingAsync();
 private:
    HANDLE thread_;
+   HANDLE sem_;
 
    DWORD WINAPI play(LPVOID arg);
 
@@ -26,5 +29,6 @@ private:
    static DWORD WINAPI play_wrapper(LPVOID arg);
 
    DWORD threadId_;
+
 };
 #endif

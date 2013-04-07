@@ -8,6 +8,7 @@
 #define _GAME_
 #include "grille.h"
 #include "player.h"
+#include <Windows.h>
 
 class Game
 {
@@ -20,13 +21,19 @@ public:
 
    void startGame();
 
+   void loop();
+
 private:
 
    int nbPlayers_;
 
+   int remaining_;
+
    grille* grid_;
 
    Player** players_;
+
+   HANDLE* sem_;
 };
 
 #endif
