@@ -23,6 +23,16 @@ void printGrille(grille g)
    }
 }
 
+void populateGrid(grille &g, int max)
+{
+   max++; //Dans mon livre a moi, les bornes sont incluses
+   for(int i = 0; i < g.size_; i++)
+   {
+      for (int j = 0; j < g.size_; j++)
+         g[i][j] = rand() % max ;
+   }
+}
+
 int main()
 {
    grille g(10);
@@ -31,9 +41,10 @@ int main()
    g[1][1] = 3;
    g[9][9] = 99;
 
-   printGrille(g);
+  // printGrille(g);
 
-   grille* a = new grille(5);
+   grille* a = new grille(10);
+   populateGrid(*a, 10);
    printGrille(*a);
    
    delete a;
