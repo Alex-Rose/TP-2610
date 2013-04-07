@@ -6,6 +6,11 @@
 */
 #ifndef _GRILLE_
 #define _GRILLE_
+
+#include <iostream>
+#include <iomanip> 
+#include <list>
+
 struct ligne_t
 {
    int size_;
@@ -45,7 +50,7 @@ struct ligne_t
       size_ = size;
       ligne_ = new int[size];
       for(int i = 0; i < size; i++)
-         ligne_[i] = 0;
+         ligne_[i] = -1;
    }
 
    int& operator[](const int index)
@@ -67,13 +72,20 @@ typedef struct grille_t
 {
    int size_;
    ligne_t** grid_;
+   std::list<std::pair<int, int> > remaining_;
 
    grille_t(int size)
    {
       size_ = size;
 
       grid_ = new ligne_t*[size];
-     
+
+      for (int i = 0; i < size; i++)
+      {
+         for (int j = 0; j < size; j++)
+            remaining_.insert(remaining_.end(), std::pair<int, int>(i, j));
+      }
+
       for (int i = 0; i < size; i++)
       {
          grid_[i] = new ligne_t(size);
@@ -90,6 +102,13 @@ typedef struct grille_t
       {
          //grid_[i].setup(size_);
          grid_[i] = new ligne_t(obj[i]);
+      }
+
+      for (int i = 0; i < size_; i++)
+      {
+         for (int j = 0; j < size_; j++)
+            if ((*this)[i][j] == -1)
+               remaining_.insert(remaining_.end(), std::pair<int, int>(i, j));
       }
    }
 
@@ -111,7 +130,6 @@ typedef struct grille_t
    {
       return *grid_[index];
    }
-
 
 } grille;
 

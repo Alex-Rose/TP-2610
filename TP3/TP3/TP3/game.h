@@ -25,15 +25,24 @@ public:
 
 private:
 
+   void printGrille(grille g);
+
    int nbPlayers_;
 
    int remaining_;
 
    grille* grid_;
+   grille* mirroir_;
 
    Player** players_;
 
    HANDLE* sem_;
+   HANDLE gridMutex_;
+   HANDLE* events_;
+   HANDLE* authorizePlay_;
+
+
+   void populateGrid(int max);
 };
 
 #endif

@@ -13,7 +13,7 @@
 
 #define println(a) std::cout<<a<<std::endl;
 
-void printGrille(grille g)
+void printGrille(grille_t g)
 {
    for(int i = 0; i < g.size_; i++)
    {
@@ -50,7 +50,7 @@ int main()
    delete a;
    
    Game* game = new Game();
-   game->init(3, 5);
+   game->init(3, 2);
    game->startGame();
    
       delete game;

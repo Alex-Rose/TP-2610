@@ -7,20 +7,29 @@
 #ifndef _PLAYER_
 #define _PLAYER_
 #include <Windows.h>
+#include "grille.h"
 
 class Player
 {
 public:
    Player();
 
-   Player(HANDLE mutex_);
+   Player(HANDLE sem_, grille*, HANDLE mutex_, HANDLE canPlay);
 
    ~Player();
 
    void startPlayingAsync();
+
+   void stopPlaying();
+
+   std::pair<int, int> choice;
+
+   int score;
 private:
    HANDLE thread_;
-   HANDLE sem_;
+   HANDLE event_;
+   HANDLE gridMutex_;
+   HANDLE canPlay_;
 
    DWORD WINAPI play(LPVOID arg);
 
@@ -29,6 +38,8 @@ private:
    static DWORD WINAPI play_wrapper(LPVOID arg);
 
    DWORD threadId_;
+
+   grille* grid_;
 
 };
 #endif
