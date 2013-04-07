@@ -9,6 +9,7 @@
 #include <iomanip>
 
 #include "grille.h"
+#include "game.h"
 
 #define println(a) std::cout<<a<<std::endl;
 
@@ -31,6 +32,18 @@ int main()
    g[9][9] = 99;
 
    printGrille(g);
+
+   grille* a = new grille(5);
+   printGrille(*a);
+   
+   delete a;
+   
+   Game* game = new Game();
+   game->init(3, 10);
+   game->startGame();
+   
+      delete game;
+
    int x;
    std::cin>>x;
    return 0;
