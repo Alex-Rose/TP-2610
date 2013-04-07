@@ -49,9 +49,11 @@ DWORD WINAPI Player::play_wrapper(void* o)
 DWORD WINAPI Player::play(LPVOID) 
 {
    //Faudrait lui mettre une condition pour arreter un jour
-   while(true)
+   while(grid_->remaining_.size() > 0)
    {
       WaitForSingleObject(event_, INFINITE);
+      if (grid_->remaining_.size() <= 0)
+         break;
 #if DEBUG    
       std::cout<<"Play from thread "<<threadId_<<std::endl;
 #endif
@@ -87,11 +89,12 @@ DWORD WINAPI Player::play(LPVOID)
 
       //ReleaseSemaphore(sem_, 1, NULL);
    }
-   return 0;
+   ExitThread(0);
 }
 
 void Player::stopPlaying()
 {
+   
    //Violent way
    TerminateThread(thread_, 0);
 }

@@ -58,6 +58,7 @@ void Game::init(int nbPlayers, int gridSize)
 
 void Game::startGame()
 {
+   //Demarrer les threads
    for(int i = 0; i < nbPlayers_; i++)
       players_[i]->startPlayingAsync();
 
@@ -68,16 +69,30 @@ void Game::startGame()
 
    system("cls");
    printGrille(*mirroir_);
-   //Liberer les joueurs, leur dire de rentrer au vestiaire prendre une douche
-   for(int i = 0; i < nbPlayers_; i++)
-      players_[i]->stopPlaying();
-
 
    //Afficher les resultats
    for (int i = 0; i < nbPlayers_; i++)
    {
       std::cout<<"Le joueur "<<i<<" a obtenu "<<players_[i]->score<<" points."<<std::endl;
    }
+
+
+   //Liberer les joueurs, leur dire de rentrer au vestiaire prendre une douche
+   for(int i = 0; i < nbPlayers_; i++)
+   {
+      //Dabord laisser une chance au thread de se terminer normalement
+      SetEvent(events_[i]);
+   }
+
+   Sleep(1000); //Donner un delais max pour que les threads se terminent
+   for(int i = 0; i < nbPlayers_; i++)
+   {
+      DWORD result = WaitForSingleObject( players_[i]->getThread(), 0);
+      // Si le thread est encore actif, le tuer de maniere violente.
+      if (result != WAIT_OBJECT_0) 
+         players_[i]->stopPlaying();
+   }
+
 }
 
 // Boucle de jeu
@@ -120,6 +135,8 @@ void Game::loop()
       case WAIT_OBJECT_0:
          WaitForSingleObject(gridMutex_, INFINITE); 
          c = players_[i]->choice;
+         if (c.first == -1 || c.second == -1)
+            continue;
 #if DEBUG
          std::cout<<"Game accepts "<<c.first<<","<<c.second<<std::endl;
 #endif

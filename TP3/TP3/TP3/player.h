@@ -25,6 +25,8 @@ public:
    std::pair<int, int> choice;
 
    int score;
+
+   HANDLE getThread() { return thread_;}
 private:
    HANDLE thread_;
    HANDLE event_;
