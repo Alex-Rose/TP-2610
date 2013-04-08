@@ -11,6 +11,7 @@
 #include <iomanip> 
 #include <list>
 
+//Ligne (array de int)
 struct ligne_t
 {
    int size_;
@@ -38,13 +39,13 @@ struct ligne_t
 
    ~ligne_t()
    {
-      //for(int i = 0; i < size_; i++)
-      //   delete &ligne_[i];
+      //delete le tableau de int
       delete []ligne_;
       ligne_ = 0;
       size_ = 0;
    }
 
+   //Initialise les valeurs a -1 (non decouvert)
    void setup(int size)
    {
       size_ = size;
@@ -53,6 +54,7 @@ struct ligne_t
          ligne_[i] = -1;
    }
 
+   //Acesseur
    int& operator[](const int index)
    {
       return ligne_[index];
@@ -77,22 +79,25 @@ typedef struct grille_t
    grille_t(int size)
    {
       size_ = size;
-
+      
+      //Tableau de lignes
       grid_ = new ligne_t*[size];
 
+      //Ajouter aux possibilites restantes chaques cases
       for (int i = 0; i < size; i++)
       {
          for (int j = 0; j < size; j++)
             remaining_.insert(remaining_.end(), std::pair<int, int>(i, j));
       }
 
+      //Creer les lignes
       for (int i = 0; i < size; i++)
       {
          grid_[i] = new ligne_t(size);
-         //grid_[i]->setup(size);
       }
    }
 
+   //Constructeur de copie
    grille_t(const grille_t &obj)
    {
       size_ = obj.size_;
@@ -112,6 +117,7 @@ typedef struct grille_t
       }
    }
 
+   //Destructeur
    ~grille_t()
    {
       if (grid_ == 0)
@@ -121,11 +127,13 @@ typedef struct grille_t
       grid_ = 0;
    }
 
+   //Accesseur
    ligne_t& operator[](const int index)
    {
       return *grid_[index];
    }
 
+   //Accesseur const
    ligne_t& operator[](const int index) const
    {
       return *grid_[index];

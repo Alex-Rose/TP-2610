@@ -8,6 +8,8 @@
 #include "game.h"
 #include <iostream>
 #include <fstream>
+#include <sstream>
+#include <string>
 
 Game::Game()
 {
@@ -179,4 +181,14 @@ void Game::printGrille(grille g)
       }
       std::cout<<std::endl;
    }
+}
+
+std::string Game::getResults()
+{
+   std::stringstream ss;
+   for (int i = 0; i < nbPlayers_; i++)
+   {
+      ss<<"Le joueur "<<i<<" a obtenu "<<players_[i]->score<<" points."<<std::endl;
+   }
+   return ss.str();
 }

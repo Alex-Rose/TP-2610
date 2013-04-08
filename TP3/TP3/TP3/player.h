@@ -9,6 +9,9 @@
 #include <Windows.h>
 #include "grille.h"
 
+//Classe qui represonte un joueur
+//La classe joueur possede le handle du thread sur lequel s'execureta
+//la loop
 class Player
 {
 public:

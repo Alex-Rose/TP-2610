@@ -23,6 +23,8 @@ public:
 
    void loop();
 
+   std::string getResults();
+
 private:
 
    void printGrille(grille g);

@@ -5,6 +5,7 @@
    * Description : 
 */
 #include <iostream>
+#include <fstream>
 #include <Windows.h>
 #include <iomanip>
 
@@ -13,6 +14,7 @@
 
 #define println(a) std::cout<<a<<std::endl;
 
+//Imprimer la grille
 void printGrille(grille_t g)
 {
    for(int i = 0; i < g.size_; i++)
@@ -23,6 +25,7 @@ void printGrille(grille_t g)
    }
 }
 
+//Attribuer des valeurs pseudo random
 void populateGrid(grille &g, int max)
 {
    max++; //Dans mon livre a moi, les bornes sont incluses
@@ -33,27 +36,37 @@ void populateGrid(grille &g, int max)
    }
 }
 
-int main()
+//Methode de test
+DWORD WINAPI startGame(LPVOID)
 {
-   grille g(10);
-   g[0][0] = 1;
-   g[1][0] = 2;
-   g[1][1] = 3;
-   g[9][9] = 99;
-
-  // printGrille(g);
-
-   grille* a = new grille(10);
-   populateGrid(*a, 10);
-   printGrille(*a);
-   
-   delete a;
-   
    Game* game = new Game();
    game->init(3, 10);
    game->startGame();
    
+   std::ofstream f("results.txt", std::ios::app);
+   f<<game->getResults().c_str()<<std::endl;
+   f.close();
    delete game;
+   return 0;
+}
+
+int main()
+{  
+   //Procedure normale pour une game
+  /* Game* game = new Game();
+   game->init(3, 10);
+   game->startGame();
+   
+   delete game;*/
+
+   //Procedure pour tester vraiment beaucoup de games en meme temps
+   HANDLE threads[2000];
+   DWORD id[2000];
+   for (int i = 0; i < 200; i++)
+   {
+      threads[i] = CreateThread(NULL, 0, startGame, NULL, 0, &id[i]);
+   }
+
 
    int x;
    std::cin>>x;
