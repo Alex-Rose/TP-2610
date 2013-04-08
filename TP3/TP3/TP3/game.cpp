@@ -10,6 +10,9 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <vector>
+
+#define DELAY_CTRL 20
 
 Game::Game()
 {
@@ -69,14 +72,12 @@ void Game::startGame()
    while(remaining_ > 0)
       loop();
 
+#ifndef NO_OUT
    system("cls");
    printGrille(*mirroir_);
+#endif
 
-   //Afficher les resultats
-   for (int i = 0; i < nbPlayers_; i++)
-   {
-      std::cout<<"Le joueur "<<i<<" a obtenu "<<players_[i]->score<<" points."<<std::endl;
-   }
+   writeResults();
 
 
    //Liberer les joueurs, leur dire de rentrer au vestiaire prendre une douche
@@ -100,13 +101,20 @@ void Game::startGame()
 // Boucle de jeu
 void Game::loop()
 {
+#ifndef NO_OUT
    system("cls");
+
+
    printGrille(*mirroir_);
    std::cout<<std::endl;
+#endif
+
+#ifndef NO_OUT
    for(int i = 0; i < nbPlayers_; i++)
    {
       std::cout<<"Joueur "<<i<<" : "<<players_[i]->score<<" point(s)"<<std::endl;
    }
+#endif
    //Je donne le tour a chaque joueur a tour de role
    for(int i = 0; i < nbPlayers_; i++)
    {
@@ -128,7 +136,7 @@ void Game::loop()
       h[0] = events_[i];
       h[1] = gridMutex_;
       //DWORD res = WaitForMultipleObjects(2, h, true, 2000); //Race condition si on met le sleep dans le wait?
-      DWORD res = WaitForSingleObject(events_[i], 2000); //Race condition si on met le sleep dans le wait?
+      DWORD res = WaitForSingleObject(events_[i], DELAY_CTRL); //Race condition si on met le sleep dans le wait?
       //DWORD res = SignalObjectAndWait(events_[i], gridMutex_, 2000, FALSE); //Race condition si on met le sleep dans le wait?
       
       std::pair<int, int> c;
@@ -170,6 +178,9 @@ void Game::populateGrid(int max)
 
 void Game::printGrille(grille g)
 {
+#ifdef NO_OUT
+   return;
+#endif
    for(int i = 0; i < g.size_; i++)
    {
       for (int j = 0; j < g.size_; j++)
@@ -183,6 +194,7 @@ void Game::printGrille(grille g)
    }
 }
 
+
 std::string Game::getResults()
 {
    std::stringstream ss;
@@ -191,4 +203,47 @@ std::string Game::getResults()
       ss<<"Le joueur "<<i<<" a obtenu "<<players_[i]->score<<" points."<<std::endl;
    }
    return ss.str();
+}
+
+void Game::writeResults(std::ostream& str)
+{
+   int max = 0;
+   std::vector<int> winners;
+   //Afficher les resultats
+   for (int i = 0; i < nbPlayers_; i++)
+   {
+      str<<"Le joueur "<<i<<" a obtenu "<<players_[i]->score<<" points."<<std::endl;
+      if (players_[i]->score > max)
+      {
+         winners.clear();
+         winners.push_back(i);
+         max = players_[i]->score;
+      }
+      else if (players_[i]->score == max)
+      {
+         winners.push_back(i);
+      }
+
+   }
+   
+
+   if(winners.size() > 1)
+   {
+      str<<"Les gagnants sont : "<<std::endl;
+      for (unsigned int i = 0; i < winners.size(); i++)
+      {
+         str<<"Joueur "<<winners[i]<<" : "<<players_[winners[i]]->score * 100<<"$"<<std::endl;
+      }
+   }
+   else
+   {
+      str<<"Le gagnant est : Joueur "<<winners[0]<<" ("<<players_[winners[0]]->score * 100<<"$)"<<std::endl;
+   }
+}
+
+void Game::writeResults()
+{
+#ifndef NO_OUT
+   writeResults(std::cout);
+#endif
 }

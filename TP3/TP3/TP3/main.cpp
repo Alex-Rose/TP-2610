@@ -37,34 +37,83 @@ void populateGrid(grille &g, int max)
 }
 
 //Methode de test
-DWORD WINAPI startGame(LPVOID)
+DWORD WINAPI startGame(LPVOID arg)
 {
+   //std::cout<<"Game "<<(int)arg<<" started"<<std::endl;
+
    Game* game = new Game();
-   game->init(3, 10);
+   game->init(5, 20);
    game->startGame();
    
    std::ofstream f("results.txt", std::ios::app);
    f<<game->getResults().c_str()<<std::endl;
+   game->writeResults(f);
    f.close();
    delete game;
+
+   std::cout<<"Game "<<(int)arg<<" over"<<std::endl;
    return 0;
 }
+
+VOID CALLBACK MyWorkCallback(
+    PTP_CALLBACK_INSTANCE Instance,
+    PVOID                 Parameter,
+    PTP_WORK              Work
+    )
+{
+   UNREFERENCED_PARAMETER(Instance);
+   UNREFERENCED_PARAMETER(Work);
+
+   std::cout<<"Work Callback"<<std::endl;
+   startGame(Parameter);
+}
+
+
+
 
 int main()
 {  
    //Procedure normale pour une game
-  /* Game* game = new Game();
-   game->init(3, 10);
+   /*Game* game = new Game();
+   game->init(5, 10);
    game->startGame();
    
    delete game;*/
+
+
+   /*TP_CALLBACK_ENVIRON CallBackEnviron;
+   InitializeThreadpoolEnvironment(&CallBackEnviron);
+   PTP_POOL pool = CreateThreadpool(NULL);
+
+   PTP_CLEANUP_GROUP cleanupgroup = CreateThreadpoolCleanupGroup();
+
+   SetThreadpoolCallbackPool(&CallBackEnviron, pool);
+
+   SetThreadpoolCallbackCleanupGroup(&CallBackEnviron,
+                                      cleanupgroup,
+                                      NULL);
+
+
+   PTP_WORK_CALLBACK workcallback = MyWorkCallback;
+
+   PTP_WORK work = CreateThreadpoolWork(workcallback, NULL, &CallBackEnviron);
+
+
+
+   for (int i = 0; i < 2 ; i++)
+   {
+      PTP_WORK work = CreateThreadpoolWork(workcallback, (void*)i, &CallBackEnviron);
+
+      SubmitThreadpoolWork(work);
+   }*/
+
 
    //Procedure pour tester vraiment beaucoup de games en meme temps
    HANDLE threads[2000];
    DWORD id[2000];
    for (int i = 0; i < 200; i++)
    {
-      threads[i] = CreateThread(NULL, 0, startGame, NULL, 0, &id[i]);
+      threads[i] = CreateThread(NULL, 0, startGame, (void*)i, 0, &id[i]);
    }
 
 

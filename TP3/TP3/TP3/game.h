@@ -25,6 +25,10 @@ public:
 
    std::string getResults();
 
+   void writeResults();
+
+   void writeResults(std::ostream& str);
+
 private:
 
    void printGrille(grille g);

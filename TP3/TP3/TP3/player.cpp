@@ -8,6 +8,7 @@
 #include <fstream>
 #include "player.h"
 
+#define DELAY_PLAYER 20
 
 Player::Player()
 {
@@ -62,7 +63,7 @@ DWORD WINAPI Player::play(LPVOID)
       std::cout<<"Play from thread "<<threadId_<<std::endl;
 #endif
       //Reflexion
-      Sleep(rand() % 3000);
+      Sleep(rand() % DELAY_PLAYER);
       //Apres reflexion savoir si on peut jouer ou s'il est trop tard
       DWORD res = WaitForSingleObject(canPlay_, 0);
       if (res == WAIT_TIMEOUT)
@@ -73,6 +74,13 @@ DWORD WINAPI Player::play(LPVOID)
       res = WaitForSingleObject(gridMutex_, 1);
       if (res == WAIT_TIMEOUT)
          continue;
+
+      
+      //Au lieu de faire un grand if, un goto pour aller directement au release des mutex.
+      //Ceci est important, car pendant que le joueur attend son mutex, la grille pourrait
+      //etre modifiee.
+      if (grid_->remaining_.size() == 0)
+         goto release;
 
       //fait un choix de case
       std::list<std::pair<int, int>>::iterator it = grid_->remaining_.begin();
@@ -88,6 +96,7 @@ DWORD WINAPI Player::play(LPVOID)
       #endif
       choice = *it;
 
+release:
       //Release les mutex
       ReleaseMutex(gridMutex_);
       ReleaseMutex(canPlay_);
