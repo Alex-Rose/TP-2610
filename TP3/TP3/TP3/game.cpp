@@ -12,7 +12,7 @@
 #include <string>
 #include <vector>
 
-#define DELAY_CTRL 20
+#define DELAY_CTRL 2000
 
 Game::Game()
 {
@@ -146,7 +146,10 @@ void Game::loop()
          WaitForSingleObject(gridMutex_, INFINITE); 
          c = players_[i]->choice;
          if (c.first == -1 || c.second == -1)
+         {
+            ReleaseMutex(gridMutex_);
             continue;
+         }
 #if DEBUG
          std::cout<<"Game accepts "<<c.first<<","<<c.second<<std::endl;
 #endif

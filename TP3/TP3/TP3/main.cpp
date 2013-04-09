@@ -55,11 +55,8 @@ DWORD WINAPI startGame(LPVOID arg)
    return 0;
 }
 
-VOID CALLBACK MyWorkCallback(
-    PTP_CALLBACK_INSTANCE Instance,
-    PVOID                 Parameter,
-    PTP_WORK              Work
-    )
+//Un callback peut etre appele par le thread pool le moment venu
+VOID CALLBACK MyWorkCallback(PTP_CALLBACK_INSTANCE Instance, PVOID Parameter, PTP_WORK Work)
 {
    UNREFERENCED_PARAMETER(Instance);
    UNREFERENCED_PARAMETER(Work);
@@ -73,14 +70,25 @@ VOID CALLBACK MyWorkCallback(
 
 int main()
 {  
-   //Procedure normale pour une game
-   /*Game* game = new Game();
-   game->init(5, 10);
+
+   std::cout<<"Combien de joueurs? ";
+   int nb, dim; 
+   std::cin>>nb;
+   std::cout<<"Dimension de la grille? ";
+   std::cin>>dim;
+
+
+   Game* game = new Game();
+   game->init(nb, dim);
    game->startGame();
-   
-   delete game;*/
+
+   delete game;
 
 
+   //Un essai en utilisant le thread pool de WinAPI
+   //Ce bloc initialise un thread pool et tous les trucs que j'ai pas encore compris, puis 
+   //Submit des work item (a la maniere de QueueUserWorkItem en C#/.NET 4.0)
+   //Source http://msdn.microsoft.com/en-us/library/windows/desktop/ms686980(v=vs.85).aspx
    /*TP_CALLBACK_ENVIRON CallBackEnviron;
    InitializeThreadpoolEnvironment(&CallBackEnviron);
    PTP_POOL pool = CreateThreadpool(NULL);
@@ -100,7 +108,7 @@ int main()
 
 
 
-   for (int i = 0; i < 2 ; i++)
+   for (int i = 0; i < 10 ; i++)
    {
       PTP_WORK work = CreateThreadpoolWork(workcallback, (void*)i, &CallBackEnviron);
 
@@ -108,15 +116,16 @@ int main()
    }*/
 
 
-   //Procedure pour tester vraiment beaucoup de games en meme temps
-   HANDLE threads[2000];
+   //Procedure pour tester vraiment beaucoup de games en meme temps (define NO_OUT sinon sa ecrit 4ever)
+   /*HANDLE threads[2000];
    DWORD id[2000];
    for (int i = 0; i < 200; i++)
    {
       threads[i] = CreateThread(NULL, 0, startGame, (void*)i, 0, &id[i]);
-   }
+   }*/
 
 
+   //Un arret avant de fermer le programme
    int x;
    std::cin>>x;
    return 0;
